@@ -1,4 +1,6 @@
-﻿using RoughBench;
+﻿// Copyright Scott Louvau, MIT License.
+
+using RoughBench;
 using System;
 using System.Collections.Generic;
 using System.Linq;

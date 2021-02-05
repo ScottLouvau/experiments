@@ -1,4 +1,6 @@
-﻿using RoughBench.Attributes;
+﻿// Copyright Scott Louvau, MIT License.
+
+using RoughBench.Attributes;
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
