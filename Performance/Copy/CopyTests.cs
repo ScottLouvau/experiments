@@ -265,6 +265,12 @@ namespace Copy
         // ~13 GB/s
 
         [Benchmark]
+        public void AsSpanCopy(byte[] source, byte[] target, int index, int lengthInBytes)
+        {
+            source.AsSpan().Slice(index, lengthInBytes).CopyTo(target.AsSpan().Slice(index, lengthInBytes));
+        }
+
+        [Benchmark]
         public void UnsafeCopyBlock(byte[] source, byte[] target, int index, int lengthInBytes)
         {
             Unsafe.CopyBlock(ref source[index], ref target[index], (uint)lengthInBytes);

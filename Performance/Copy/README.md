@@ -1,10 +1,10 @@
 # C# Byte Copy Performance
 
-This project contains a set of simple methods to copy from one byte array to another in C# to measure the performance of different approaches. My goal was to get as close to the full memory bandwidth reported by memory benchmarks as possible.
+I wanted to know the fastest way to copy from one byte array to another in C#, and to see if I could match the benchmark-reported memory bandwidth of my computer. 
+
+The AIDA64 benchmark reports the memory copy bandwidth of my ASUS ROG Zephyrus G14 at about [**39.6 GB/s**](https://rog.asus.com/us/articles/reviews/rog-zephyrus-g14-lab-report-2). Importantly, AIDA64 counts [the sum](https://forums.aida64.com/topic/3708-memory-bench-questions/) of the read and write size in this measurement, so this really means about 20 GB of data can be copied in one second. My numbers below only count the copied data size once, as this makes more sense to me as a programmer.
 
 ### Conclusions
-
-I wasn't able to get the full copy memory bandwidth reported for my computer, which should be **40 GB/s** according to AIDA64.
 
 The fastest single threaded copy, at 13 GB/s, was **Unsafe.CopyBlock()**.
 
@@ -20,7 +20,7 @@ When running multi-threaded, the options which use non-temporal stores can hit a
 
 ### Measurements 
 
-.NET 5.0, Release, Plugged In, 'Best Performance' power profile.
+.NET 5.0, Release, Plugged In, 'Best Performance' power profile. These numbers count the size of the data copied once (not once for the read and once for the write), so ideally these numbers will be half of the AIDA64 memory copy score.
 
 #### ASUS ROG Zephyrus G14: Ryzen 4900 HS, 16 GB DDR4-3200
 
@@ -88,44 +88,50 @@ When running multi-threaded, the options which use non-temporal stores can hit a
 
 | Method [+ threads]          |     Speed | Per 32.0 MB |
 | --------------------------- | --------: | ----------: |
+| AsSpanCopy                  | 9.50 GB/s |     3.29 ms |
+| AsSpanCopy 2t               | 11.8 GB/s |     2.65 ms |
+| AsSpanCopy 4t               | 12.1 GB/s |     2.58 ms |
 | ForByte                     | 1.77 GB/s |     17.6 ms |
-| ForByte 2t                  | 3.55 GB/s |     8.81 ms |
-| ForByte 4t                  | 6.79 GB/s |     4.60 ms |
-| ArrayCopy                   | 8.95 GB/s |     3.49 ms |
-| ArrayCopy 2t                | 10.3 GB/s |     3.03 ms |
-| ArrayCopy 4t                | 11.2 GB/s |     2.80 ms |
-| BufferBlockCopy             | 8.91 GB/s |     3.51 ms |
-| BufferBlockCopy 2t          | 10.1 GB/s |     3.11 ms |
-| BufferBlockCopy 4t          | 11.1 GB/s |     2.82 ms |
-| ForUnsafeAsLong             | 7.90 GB/s |     3.96 ms |
-| ForUnsafeAsLong 2t          | 9.01 GB/s |     3.47 ms |
-| ForUnsafeAsLong 4t          | 8.85 GB/s |     3.53 ms |
-| UnsafeCopyBlock             | 9.19 GB/s |     3.40 ms |
-| UnsafeCopyBlock 2t          | 10.6 GB/s |     2.95 ms |
-| UnsafeCopyBlock 4t          | 11.3 GB/s |     2.76 ms |
-| UnsafeCopyBlockUnaligned    | 9.33 GB/s |     3.35 ms |
-| UnsafeCopyBlockUnaligned 2t | 11.1 GB/s |     2.81 ms |
-| UnsafeCopyBlockUnaligned 4t | 11.4 GB/s |     2.74 ms |
-| BufferMemoryCopy            | 9.15 GB/s |     3.41 ms |
-| BufferMemoryCopy 2t         | 11.0 GB/s |     2.84 ms |
-| BufferMemoryCopy 4t         | 11.3 GB/s |     2.77 ms |
-| UnsafeForLong               | 9.16 GB/s |     3.41 ms |
-| UnsafeForLong 2t            | 9.65 GB/s |     3.24 ms |
-| UnsafeWhileLong             | 9.03 GB/s |     3.46 ms |
-| UnsafeWhileLong 2t          | 9.62 GB/s |     3.25 ms |
-| LoadUStoreU                 | 9.81 GB/s |     3.19 ms |
-| LoadUStoreU 2t              | 9.86 GB/s |     3.17 ms |
-| Avx128                      | 9.84 GB/s |     3.18 ms |
-| Avx128 2t                   | 9.88 GB/s |     3.16 ms |
-| Avx256                      | 9.78 GB/s |     3.20 ms |
-| Avx256 2t                   | 9.93 GB/s |     3.15 ms |
-| StoreNonTemporalInt         | 8.74 GB/s |     3.58 ms |
-| StoreNonTemporalInt 2t      | 14.3 GB/s |     2.19 ms |
-| StoreNonTemporalInt 4t      | 13.8 GB/s |     2.27 ms |
-| StoreNonTemporalLong        | 13.3 GB/s |     2.36 ms |
-| StoreNonTemporalLong 2t     | 14.4 GB/s |     2.17 ms |
-| StoreNonTemporalAvx128      | 6.99 GB/s |     4.47 ms |
-| StoreNonTemporalAvx128 2t   | 13.4 GB/s |     2.33 ms |
-| StoreNonTemporalAvx128 4t   | 13.6 GB/s |     2.29 ms |
-| Memcpy                      | 13.4 GB/s |     2.33 ms |
-| Memcpy 2t                   | 13.7 GB/s |     2.28 ms |
+| ForByte 2t                  | 3.55 GB/s |     8.80 ms |
+| ForByte 4t                  | 6.76 GB/s |     4.62 ms |
+| ArrayCopy                   | 9.55 GB/s |     3.27 ms |
+| ArrayCopy 2t                | 11.9 GB/s |     2.63 ms |
+| ArrayCopy 4t                | 12.2 GB/s |     2.56 ms |
+| BufferBlockCopy             | 9.56 GB/s |     3.27 ms |
+| BufferBlockCopy 2t          | 11.9 GB/s |     2.63 ms |
+| BufferBlockCopy 4t          | 12.2 GB/s |     2.56 ms |
+| ForUnsafeAsLong             | 8.34 GB/s |     3.75 ms |
+| ForUnsafeAsLong 2t          | 9.85 GB/s |     3.17 ms |
+| ForUnsafeAsLong 4t          | 9.66 GB/s |     3.24 ms |
+| UnsafeCopyBlock             | 9.85 GB/s |     3.17 ms |
+| UnsafeCopyBlock 2t          | 12.2 GB/s |     2.56 ms |
+| UnsafeCopyBlock 4t          | 12.5 GB/s |     2.50 ms |
+| UnsafeCopyBlockUnaligned    | 9.86 GB/s |     3.17 ms |
+| UnsafeCopyBlockUnaligned 2t | 12.2 GB/s |     2.56 ms |
+| UnsafeCopyBlockUnaligned 4t | 12.5 GB/s |     2.50 ms |
+| BufferMemoryCopy            | 9.71 GB/s |     3.22 ms |
+| BufferMemoryCopy 2t         | 12.1 GB/s |     2.57 ms |
+| BufferMemoryCopy 4t         | 12.4 GB/s |     2.51 ms |
+| UnsafeForLong               | 9.78 GB/s |     3.19 ms |
+| UnsafeForLong 2t            | 11.1 GB/s |     2.81 ms |
+| UnsafeForLong 4t            | 10.2 GB/s |     3.07 ms |
+| UnsafeWhileLong             | 9.61 GB/s |     3.25 ms |
+| UnsafeWhileLong 2t          | 11.0 GB/s |     2.84 ms |
+| UnsafeWhileLong 4t          | 10.1 GB/s |     3.09 ms |
+| LoadUStoreU                 | 11.0 GB/s |     2.84 ms |
+| LoadUStoreU 2t              | 11.4 GB/s |     2.75 ms |
+| Avx128                      | 11.0 GB/s |     2.84 ms |
+| Avx128 2t                   | 11.4 GB/s |     2.75 ms |
+| Avx256                      | 10.9 GB/s |     2.86 ms |
+| Avx256 2t                   | 11.4 GB/s |     2.73 ms |
+| StoreNonTemporalInt         | 8.96 GB/s |     3.49 ms |
+| StoreNonTemporalInt 2t      | 15.6 GB/s |     2.00 ms |
+| StoreNonTemporalInt 4t      | 15.0 GB/s |     2.09 ms |
+| StoreNonTemporalLong        | 14.3 GB/s |     2.19 ms |
+| StoreNonTemporalLong 2t     | 16.0 GB/s |     1.96 ms |
+| StoreNonTemporalLong 4t     | 15.0 GB/s |     2.09 ms |
+| StoreNonTemporalAvx128      | 7.04 GB/s |     4.44 ms |
+| StoreNonTemporalAvx128 2t   | 13.9 GB/s |     2.24 ms |
+| StoreNonTemporalAvx128 4t   | 14.9 GB/s |     2.09 ms |
+| Memcpy                      | 14.4 GB/s |     2.17 ms |
+| Memcpy 2t                   | 15.2 GB/s |     2.06 ms |
