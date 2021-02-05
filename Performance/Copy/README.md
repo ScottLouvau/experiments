@@ -20,7 +20,9 @@ When running multi-threaded, the options which use non-temporal stores can hit a
 
 ### Measurements 
 
-.NET 5.0, Release, Ryzen 4900 HS, 16 GB DDR4-3200, ASUS ROG Zephyrus G14
+.NET 5.0, Release, Plugged In, 'Best Performance' power profile.
+
+#### ASUS ROG Zephyrus G14: Ryzen 4900 HS, 16 GB DDR4-3200
 
 | Method [+ threads]          |     Speed | Per 32.0 MB |
 | --------------------------- | --------: | ----------: |
@@ -81,3 +83,49 @@ When running multi-threaded, the options which use non-temporal stores can hit a
 | Memcpy 2t                   | 16.4 GB/s |     1.90 ms |
 | Memcpy 4t                   | 18.4 GB/s |     1.70 ms |
 | Memcpy 8t                   | 19.0 GB/s |     1.64 ms |
+
+#### Desktop: i7-7500, 32 GB DDR4-2400
+
+| Method [+ threads]          |     Speed | Per 32.0 MB |
+| --------------------------- | --------: | ----------: |
+| ForByte                     | 1.77 GB/s |     17.6 ms |
+| ForByte 2t                  | 3.55 GB/s |     8.81 ms |
+| ForByte 4t                  | 6.79 GB/s |     4.60 ms |
+| ArrayCopy                   | 8.95 GB/s |     3.49 ms |
+| ArrayCopy 2t                | 10.3 GB/s |     3.03 ms |
+| ArrayCopy 4t                | 11.2 GB/s |     2.80 ms |
+| BufferBlockCopy             | 8.91 GB/s |     3.51 ms |
+| BufferBlockCopy 2t          | 10.1 GB/s |     3.11 ms |
+| BufferBlockCopy 4t          | 11.1 GB/s |     2.82 ms |
+| ForUnsafeAsLong             | 7.90 GB/s |     3.96 ms |
+| ForUnsafeAsLong 2t          | 9.01 GB/s |     3.47 ms |
+| ForUnsafeAsLong 4t          | 8.85 GB/s |     3.53 ms |
+| UnsafeCopyBlock             | 9.19 GB/s |     3.40 ms |
+| UnsafeCopyBlock 2t          | 10.6 GB/s |     2.95 ms |
+| UnsafeCopyBlock 4t          | 11.3 GB/s |     2.76 ms |
+| UnsafeCopyBlockUnaligned    | 9.33 GB/s |     3.35 ms |
+| UnsafeCopyBlockUnaligned 2t | 11.1 GB/s |     2.81 ms |
+| UnsafeCopyBlockUnaligned 4t | 11.4 GB/s |     2.74 ms |
+| BufferMemoryCopy            | 9.15 GB/s |     3.41 ms |
+| BufferMemoryCopy 2t         | 11.0 GB/s |     2.84 ms |
+| BufferMemoryCopy 4t         | 11.3 GB/s |     2.77 ms |
+| UnsafeForLong               | 9.16 GB/s |     3.41 ms |
+| UnsafeForLong 2t            | 9.65 GB/s |     3.24 ms |
+| UnsafeWhileLong             | 9.03 GB/s |     3.46 ms |
+| UnsafeWhileLong 2t          | 9.62 GB/s |     3.25 ms |
+| LoadUStoreU                 | 9.81 GB/s |     3.19 ms |
+| LoadUStoreU 2t              | 9.86 GB/s |     3.17 ms |
+| Avx128                      | 9.84 GB/s |     3.18 ms |
+| Avx128 2t                   | 9.88 GB/s |     3.16 ms |
+| Avx256                      | 9.78 GB/s |     3.20 ms |
+| Avx256 2t                   | 9.93 GB/s |     3.15 ms |
+| StoreNonTemporalInt         | 8.74 GB/s |     3.58 ms |
+| StoreNonTemporalInt 2t      | 14.3 GB/s |     2.19 ms |
+| StoreNonTemporalInt 4t      | 13.8 GB/s |     2.27 ms |
+| StoreNonTemporalLong        | 13.3 GB/s |     2.36 ms |
+| StoreNonTemporalLong 2t     | 14.4 GB/s |     2.17 ms |
+| StoreNonTemporalAvx128      | 6.99 GB/s |     4.47 ms |
+| StoreNonTemporalAvx128 2t   | 13.4 GB/s |     2.33 ms |
+| StoreNonTemporalAvx128 4t   | 13.6 GB/s |     2.29 ms |
+| Memcpy                      | 13.4 GB/s |     2.33 ms |
+| Memcpy 2t                   | 13.7 GB/s |     2.28 ms |
