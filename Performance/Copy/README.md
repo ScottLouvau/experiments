@@ -30,27 +30,33 @@ When running multi-threaded, the options which use non-temporal stores can hit a
 
 #### ASUS ROG Zephyrus G14: Ryzen 4900 HS, 16 GB DDR4-3200
 
-| Method                                | Speed [1T] | Speed [2T] | Speed [4T] | Speed [8T] | Speed [16T] |
-| ------------------------------------- | ---------: | ---------: | ---------: | ---------: | ----------: |
-| ArrayCopy                             |  12.7 GB/s |  17.3 GB/s |  18.2 GB/s |  18.9 GB/s |   17.9 GB/s |
-| BufferBlockCopy                       |  12.7 GB/s |  17.0 GB/s |  18.2 GB/s |  18.8 GB/s |   17.9 GB/s |
-| AsSpanCopy                            |  12.8 GB/s |  16.9 GB/s |  18.2 GB/s |  18.8 GB/s |   17.9 GB/s |
-| UnsafeCopyBlock                       |  12.6 GB/s |  16.9 GB/s |  18.0 GB/s |  18.8 GB/s |   17.9 GB/s |
-| UnsafeCopyBlockUnaligned              |  12.6 GB/s |  17.0 GB/s |  18.1 GB/s |  18.6 GB/s |   17.9 GB/s |
-| ForByte                               |  1.93 GB/s |  3.73 GB/s |  6.69 GB/s |  9.53 GB/s |   9.42 GB/s |
-| ForUnsafeAsLong                       |  7.71 GB/s |  10.3 GB/s |  10.5 GB/s |  10.5 GB/s |   9.67 GB/s |
-| BufferMemoryCopy                      |  12.7 GB/s |  16.8 GB/s |  17.9 GB/s |  18.6 GB/s |   17.8 GB/s |
-| Memcpy                                |  11.8 GB/s |  16.4 GB/s |  18.1 GB/s |  18.9 GB/s |   18.0 GB/s |
-| UnsafeForLong                         |  7.80 GB/s |  10.2 GB/s |  10.2 GB/s |  10.3 GB/s |   9.57 GB/s |
-| UnsafeWhileLong                       |  6.79 GB/s |  8.91 GB/s |  9.00 GB/s |  9.62 GB/s |   9.41 GB/s |
-| LoadUStoreU                           |  7.96 GB/s |  9.33 GB/s |  10.2 GB/s |  10.1 GB/s |   9.61 GB/s |
-| Avx128                                |  8.80 GB/s |  10.6 GB/s |  10.6 GB/s |  10.4 GB/s |   9.56 GB/s |
-| Avx256                                |  8.68 GB/s |  10.6 GB/s |  10.4 GB/s |  10.5 GB/s |   9.70 GB/s |
-| StoreNonTemporalInt                   |  7.21 GB/s |  12.5 GB/s |  16.9 GB/s |  17.7 GB/s |   17.3 GB/s |
-| StoreNonTemporalLong                  |  11.1 GB/s |  14.9 GB/s |  17.7 GB/s |  18.2 GB/s |   17.5 GB/s |
-| StoreNonTemporalAvx128                |  7.22 GB/s |  13.0 GB/s |  17.3 GB/s |  18.1 GB/s |   17.4 GB/s |
-| StoreNonTemporalAvx256UnrolledAligned |  12.7 GB/s |  16.7 GB/s |  17.7 GB/s |  18.1 GB/s |   17.5 GB/s |
-
-
+| Method                               | Speed [1T] | Speed [2T] | Speed [4T] | Speed [8T] | Speed [16T] |
+| ------------------------------------ | ---------: | ---------: | ---------: | ---------: | ----------: |
+| ArrayCopy                            |  12.6 GB/s |  16.9 GB/s |  18.2 GB/s |  18.8 GB/s |   18.0 GB/s |
+| BufferBlockCopy                      |  12.7 GB/s |  16.9 GB/s |  18.2 GB/s |  18.8 GB/s |   18.0 GB/s |
+| AsSpanCopy                           |  12.6 GB/s |  17.0 GB/s |  18.2 GB/s |  18.8 GB/s |   18.0 GB/s |
+| UnsafeCopyBlock                      |  12.7 GB/s |  17.1 GB/s |  18.0 GB/s |  18.9 GB/s |   18.0 GB/s |
+| UnsafeCopyBlockUnaligned             |  12.7 GB/s |  17.1 GB/s |  18.1 GB/s |  18.8 GB/s |   18.0 GB/s |
+| ForByte                              |  1.99 GB/s |  3.82 GB/s |  7.28 GB/s |  9.94 GB/s |   9.51 GB/s |
+| ForUnsafeAsLong                      |  7.78 GB/s |  10.4 GB/s |  10.4 GB/s |  10.5 GB/s |   9.69 GB/s |
+| BufferMemoryCopy                     |  12.7 GB/s |  17.0 GB/s |  18.2 GB/s |  18.8 GB/s |   18.0 GB/s |
+| Memcpy                               |  11.5 GB/s |  16.5 GB/s |  18.0 GB/s |  18.8 GB/s |   18.1 GB/s |
+| UnsafeForLong                        |  7.50 GB/s |  9.78 GB/s | 10.00 GB/s |  9.45 GB/s |   9.33 GB/s |
+| UnsafeWhileLong                      |  7.02 GB/s |  9.85 GB/s |  10.4 GB/s |  10.5 GB/s |   9.74 GB/s |
+| Avx128_LoadStore                     |  8.78 GB/s |  10.6 GB/s |  10.4 GB/s |  10.2 GB/s |   9.61 GB/s |
+| Avx256_LoadStore                     |  8.89 GB/s |  10.8 GB/s |  10.5 GB/s |  10.5 GB/s |   9.65 GB/s |
+| StoreNonTemporalInt                  |  7.28 GB/s |  12.3 GB/s |  16.9 GB/s |  17.8 GB/s |   17.2 GB/s |
+| StoreNonTemporalLong                 |  10.8 GB/s |  15.1 GB/s |  17.8 GB/s |  18.4 GB/s |   17.5 GB/s |
+| StoreNonTemporalLong_Unrolled2       |  11.0 GB/s |  15.4 GB/s |  17.7 GB/s |  18.4 GB/s |   17.6 GB/s |
+| StoreNonTemporalLong_Unrolled4       |  11.0 GB/s |  15.3 GB/s |  17.7 GB/s |  18.4 GB/s |   17.6 GB/s |
+| Avx128_StoreNonTemporal              |  7.18 GB/s |  12.5 GB/s |  17.4 GB/s |  18.1 GB/s |   17.4 GB/s |
+| Avx128_StoreNonTemporal_Unrolled2    |  9.78 GB/s |  14.9 GB/s |  17.7 GB/s |  18.3 GB/s |   17.5 GB/s |
+| Avx128_StoreNonTemporal_Unrolled2v2  |  9.70 GB/s |  14.6 GB/s |  17.7 GB/s |  18.3 GB/s |   17.4 GB/s |
+| Avx128_StoreNonTemporal_Unrolled4v2  |  10.6 GB/s |  15.2 GB/s |  17.7 GB/s |  18.3 GB/s |   17.5 GB/s |
+| Avx256_StoreNonTemporal              |  9.72 GB/s |  15.2 GB/s |  17.7 GB/s |  18.3 GB/s |   17.5 GB/s |
+| Avx256_StoreNonTemporal_Unrolled2v2  |  11.1 GB/s |  15.5 GB/s |  17.7 GB/s |  18.3 GB/s |   17.6 GB/s |
+| Avx256_StoreNonTemporal_Unrolled4v2  |  11.1 GB/s |  15.6 GB/s |  17.5 GB/s |  18.2 GB/s |   17.6 GB/s |
+| Avx256_StoreNonTemporal_Unrolled8v2  |  12.5 GB/s |  16.7 GB/s |  17.7 GB/s |  18.3 GB/s |   17.5 GB/s |
+| Avx256_StoreNonTemporal_Unrolled16v2 |  12.5 GB/s |  16.7 GB/s |  17.6 GB/s |  18.3 GB/s |   17.5 GB/s |
 
 #### Desktop: i7-7500, 32 GB DDR4-2400
