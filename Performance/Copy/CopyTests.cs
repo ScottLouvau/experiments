@@ -12,7 +12,7 @@ namespace Copy
 {
     public class CopyTests
     {
-        public const int Length = 64 * 1024 * 1024;
+        public const int Length = 64 * 1024 * 1024 - 1;
         private byte[] Source;
         private byte[] Target;
 
@@ -86,27 +86,33 @@ namespace Copy
         }
 
         // Methods which require target pointer alignment can run this first to copy any unaligned prefix
-        protected unsafe void CopyUntilAligned(ref byte* source, ref byte* target, ref int lengthInBytes)
+        protected unsafe void CopyUntilAligned(ref byte* source, ref byte* target, ref int lengthInBytes, int alignment)
         {
-            // Copy bytes manually until target is 64-byte aligned
-            while (((long)target & 0x4F) != 0)
+            // Copy bytes until target is aligned to the required byte boundary
+            int bytesUntilAligned = (int)(alignment - (long)target & (alignment - 1));
+            CopyByByte(source, target, target + bytesUntilAligned);
+
+            source += bytesUntilAligned;
+            target += bytesUntilAligned;
+            lengthInBytes -= bytesUntilAligned;
+        }
+
+        // Copy individual bytes, moving pointers as we go
+        protected unsafe void CopyByByte(byte* source, byte* target, byte* targetEnd)
+        {
+            while (target < targetEnd)
             {
                 *target++ = *source++;
-                lengthInBytes--;
             }
         }
 
-
-        // Methods which require target pointer alignment can run this first to copy any unaligned prefix
-        protected unsafe void ForceBothAligned(ref byte* source, ref byte* target, ref int lengthInBytes)
+        // Copy individual bytes (non-unsafe code)
+        protected void CopyByByte(byte[] source, byte[] target, int index, int endIndex)
         {
-            long sourceOffset = ((long)source & 0x3F);
-            long targetOffset = ((long)target & 0x3F);
-
-            source += 0x40 - sourceOffset;
-            target += 0x40 - targetOffset;
-
-            lengthInBytes -= (int)Math.Max(0x40 - sourceOffset, 0x40 - targetOffset);
+            for (int i = index; i < endIndex; ++i)
+            {
+                target[i] = source[i];
+            }
         }
 
         // ==============================================================================================
@@ -146,8 +152,8 @@ namespace Copy
         [Benchmark]
         public void ForUnsafeAsLong(byte[] source, byte[] target, int index, int lengthInBytes)
         {
-            ulong[] from = Unsafe.As<ulong[]>(source);
-            ulong[] to = Unsafe.As<ulong[]>(target);
+            long[] from = Unsafe.As<long[]>(source);
+            long[] to = Unsafe.As<long[]>(target);
             int start = index / 8;
             int length = lengthInBytes / 8;
 
@@ -155,32 +161,40 @@ namespace Copy
             {
                 to[i] = from[i];
             }
+
+            CopyByByte(source, target, index + length * 8, index + lengthInBytes);
         }
 
         [Benchmark]
         public unsafe void UnsafeForLong(byte* source, byte* target, int lengthInBytes)
         {
-            ulong* from = (ulong*)source;
-            ulong* to = (ulong*)target;
+            long* from = (long*)source;
+            long* to = (long*)target;
+            long* toEnd = (long*)(&target[lengthInBytes]);
+
             int length = lengthInBytes / 8;
 
             for (int i = 0; i < length; ++i)
             {
-                to[i] = from[i];
+                *to++ = *from++;
             }
+
+            CopyByByte((byte*)from, (byte*)to, (byte*)toEnd);
         }
 
         [Benchmark]
         public unsafe void UnsafeWhileLong(byte* source, byte* target, int lengthInBytes)
         {
-            ulong* from = (ulong*)source;
-            ulong* fromEnd = (ulong*)(&source[lengthInBytes - 1]);
-            ulong* to = (ulong*)target;
+            long* from = (long*)source;
+            long* to = (long*)target;
+            long* toEnd = (long*)(&target[lengthInBytes]);
 
-            while (from < fromEnd)
+            while (to < toEnd)
             {
                 *to++ = *from++;
             }
+
+            CopyByByte((byte*)from, (byte*)to, (byte*)toEnd);
         }
 
         [Benchmark]
@@ -189,38 +203,49 @@ namespace Copy
             // Recommendation from Peter Cordes in https://stackoverflow.com/questions/39153868/vectorized-memcpy-that-beats-intel-fast-memcpy
             float* from = (float*)source;
             float* to = (float*)target;
+            float* toEnd = (float*)(&target[lengthInBytes]);
 
-            for (int i = 0; i < lengthInBytes; i += 16)
+            for (int i = 0; i + 16 <= lengthInBytes; i += 16)
             {
                 Sse2.Store(to, Sse2.LoadVector128(from));
 
                 from += 4;
                 to += 4;
             }
+
+            CopyByByte((byte*)from, (byte*)to, (byte*)toEnd);
         }
 
         [Benchmark]
         public unsafe void Avx128(byte* source, byte* target, int lengthInBytes)
         {
-            for (int i = 0; i < lengthInBytes; i += 16)
+            byte* toEnd = &target[lengthInBytes];
+
+            for (int i = 0; i + 16 <= lengthInBytes; i += 16)
             {
                 Avx.Store(target, Avx.LoadDquVector128(source));
 
                 source += 16;
                 target += 16;
             }
+
+            CopyByByte(source, target, toEnd);
         }
 
         [Benchmark]
         public unsafe void Avx256(byte* source, byte* target, int lengthInBytes)
         {
-            for (int i = 0; i < lengthInBytes; i += 32)
+            byte* toEnd = &target[lengthInBytes];
+
+            for (int i = 0; i + 32 <= lengthInBytes; i += 32)
             {
                 Avx2.Store(target, Avx2.LoadDquVector256(source));
 
                 source += 32;
                 target += 32;
             }
+
+            CopyByByte(source, target, toEnd);
         }
 
         [Benchmark]
@@ -228,12 +253,15 @@ namespace Copy
         {
             uint* from = (uint*)source;
             uint* to = (uint*)target;
+            uint* toEnd = (uint*)(&target[lengthInBytes]);
             int length = lengthInBytes / 4;
 
             for (int i = 0; i < length; ++i)
             {
                 Avx.StoreNonTemporal(&to[i], from[i]);
             }
+
+            CopyByByte((byte*)from, (byte*)to, (byte*)toEnd);
         }
 
         [Benchmark]
@@ -241,18 +269,22 @@ namespace Copy
         {
             ulong* from = (ulong*)source;
             ulong* to = (ulong*)target;
+            uint* toEnd = (uint*)(&target[lengthInBytes]);
             int length = lengthInBytes / 8;
 
             for (int i = 0; i < length; ++i)
             {
                 Sse2.X64.StoreNonTemporal(&to[i], from[i]);
             }
+
+            CopyByByte((byte*)from, (byte*)to, (byte*)toEnd);
         }
 
         [Benchmark]
         public unsafe void StoreNonTemporalAvx128(byte* source, byte* target, int lengthInBytes)
         {
-            CopyUntilAligned(ref source, ref target, ref lengthInBytes);
+            byte* toEnd = &target[lengthInBytes];
+            CopyUntilAligned(ref source, ref target, ref lengthInBytes, 16);
 
             for (int i = 0; i < lengthInBytes; i += 16)
             {
@@ -261,13 +293,15 @@ namespace Copy
                 source += 16;
                 target += 16;
             }
+
+            CopyByByte(source, target, toEnd);
         }
 
         [Benchmark]
         public unsafe void StoreNonTemporalAvx256UnrolledAligned(byte* source, byte* target, int lengthInBytes)
         {
-            //CopyUntilAligned(ref source, ref target, ref lengthInBytes);
-            ForceBothAligned(ref source, ref target, ref lengthInBytes);
+            byte* toEnd = &target[lengthInBytes];
+            CopyUntilAligned(ref source, ref target, ref lengthInBytes, 32);
 
             float* from = (float*)source;
             float* to = (float*)target;
@@ -275,22 +309,22 @@ namespace Copy
 
             for (int i = 0; i + 128 <= lengthInFloats; i += 128)
             {
-                Vector256<float> ymm0 = Avx.LoadAlignedVector256(from + 0);
-                Vector256<float> ymm1 = Avx.LoadAlignedVector256(from + 8);
-                Vector256<float> ymm2 = Avx.LoadAlignedVector256(from + 16);
-                Vector256<float> ymm3 = Avx.LoadAlignedVector256(from + 24);
-                Vector256<float> ymm4 = Avx.LoadAlignedVector256(from + 32);
-                Vector256<float> ymm5 = Avx.LoadAlignedVector256(from + 40);
-                Vector256<float> ymm6 = Avx.LoadAlignedVector256(from + 48);
-                Vector256<float> ymm7 = Avx.LoadAlignedVector256(from + 56);
-                Vector256<float> ymm8 = Avx.LoadAlignedVector256(from + 64);
-                Vector256<float> ymm9 = Avx.LoadAlignedVector256(from + 72);
-                Vector256<float> ymm10 = Avx.LoadAlignedVector256(from + 80);
-                Vector256<float> ymm11 = Avx.LoadAlignedVector256(from + 88);
-                Vector256<float> ymm12 = Avx.LoadAlignedVector256(from + 96);
-                Vector256<float> ymm13 = Avx.LoadAlignedVector256(from + 104);
-                Vector256<float> ymm14 = Avx.LoadAlignedVector256(from + 112);
-                Vector256<float> ymm15 = Avx.LoadAlignedVector256(from + 120);
+                Vector256<float> ymm0 = Avx.LoadVector256(from + 0);
+                Vector256<float> ymm1 = Avx.LoadVector256(from + 8);
+                Vector256<float> ymm2 = Avx.LoadVector256(from + 16);
+                Vector256<float> ymm3 = Avx.LoadVector256(from + 24);
+                Vector256<float> ymm4 = Avx.LoadVector256(from + 32);
+                Vector256<float> ymm5 = Avx.LoadVector256(from + 40);
+                Vector256<float> ymm6 = Avx.LoadVector256(from + 48);
+                Vector256<float> ymm7 = Avx.LoadVector256(from + 56);
+                Vector256<float> ymm8 = Avx.LoadVector256(from + 64);
+                Vector256<float> ymm9 = Avx.LoadVector256(from + 72);
+                Vector256<float> ymm10 = Avx.LoadVector256(from + 80);
+                Vector256<float> ymm11 = Avx.LoadVector256(from + 88);
+                Vector256<float> ymm12 = Avx.LoadVector256(from + 96);
+                Vector256<float> ymm13 = Avx.LoadVector256(from + 104);
+                Vector256<float> ymm14 = Avx.LoadVector256(from + 112);
+                Vector256<float> ymm15 = Avx.LoadVector256(from + 120);
 
                 Avx.StoreAlignedNonTemporal(to + 0, ymm0);
                 Avx.StoreAlignedNonTemporal(to + 8, ymm1);
@@ -312,6 +346,8 @@ namespace Copy
                 from += 128;
                 to += 128;
             }
+
+            CopyByByte((byte*)from, (byte*)to, toEnd);
         }
 
         //[Benchmark]
