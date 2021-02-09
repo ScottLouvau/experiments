@@ -2,7 +2,7 @@
   "profiles": {
     "Copy": {
       "commandName": "Project",
-      "commandLineArgs": "16 Avx256Unrolled 10"
+      "commandLineArgs": "1 \"\" 1"
     }
   }
 }

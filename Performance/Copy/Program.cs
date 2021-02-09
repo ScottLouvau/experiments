@@ -36,10 +36,10 @@ namespace Copy
             CopyTests cpt = new CopyTests();
 
             // Find all 'CopyKernel' signature benchmark methods to test
-            Dictionary<string, CopyTests.CopyKernel> methods = Reflector.BenchmarkMethods<CopyTests.CopyKernel>(cpt.GetType(), cpt);
+            Dictionary<string, CopyTests.CopyKernel> methods = BenchmarkReflector.BenchmarkMethods<CopyTests.CopyKernel>(cpt.GetType(), cpt);
 
             // Find all 'UnsafeCopyKernel' methods, wrap them, and include them
-            foreach (var pair in Reflector.BenchmarkMethods<CopyTests.UnsafeCopyKernel>(cpt.GetType(), cpt))
+            foreach (var pair in BenchmarkReflector.BenchmarkMethods<CopyTests.UnsafeCopyKernel>(cpt.GetType(), cpt))
             {
                 methods[pair.Key] = cpt.Wrap(pair.Value);
             }
@@ -65,14 +65,14 @@ namespace Copy
                         threads
                     );
 
-                    //bool identical = cpt.VerifyIdentical();
+                    bool identical = cpt.VerifyIdentical();
                     cpt.Clear();
 
-                    //if (!identical)
-                    //{
-                    //    Console.WriteLine($"ERROR: {current.DisplayName} did not correctly copy bytes.");
-                    //    return;
-                    //}
+                    if (!identical)
+                    {
+                        Console.WriteLine($"ERROR: {current.DisplayName} did not correctly copy bytes.");
+                        return;
+                    }
 
                     table.AppendRow(RenderRow(current));
                     results.Add(current);
