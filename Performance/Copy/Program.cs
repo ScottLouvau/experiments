@@ -4,6 +4,7 @@ using RoughBench;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace Copy
 {
@@ -28,7 +29,7 @@ namespace Copy
             int threadLimit = (args.Length > 1 ? int.Parse(args[1]) : Environment.ProcessorCount);
             string methodName = (args.Length > 2 ? args[2] : null);
 
-            Console.WriteLine("Running Copy Performance Tests...");
+            Console.WriteLine($"Running Copy Performance Tests [{RuntimeInformation.FrameworkDescription} on {Environment.MachineName}]...");
 
             CopyTests cpt = new CopyTests();
 
@@ -43,7 +44,7 @@ namespace Copy
 
             if (methodName != null)
             {
-                methods = new Dictionary<string, CopyTests.CopyKernel>(methods.Where((m) => m.Key.Contains(methodName, StringComparison.OrdinalIgnoreCase)));
+                methods = methods.Where((m) => m.Key.IndexOf(methodName, StringComparison.OrdinalIgnoreCase) >= 0).ToDictionary((m) => m.Key, (m) => m.Value);
             }
 
             MeasureSettings settings = new MeasureSettings(TimeSpan.FromSeconds(seconds), 5, 1000000, false);

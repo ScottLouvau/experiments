@@ -60,3 +60,17 @@ When running multi-threaded, the options which use non-temporal stores can hit a
 | Avx256_StoreNonTemporal_Unrolled16v2 |  12.5 GB/s |  16.7 GB/s |  17.6 GB/s |  18.3 GB/s |   17.5 GB/s |
 
 #### Desktop: i7-7500, 32 GB DDR4-2400
+
+
+
+#### Quick Q&A
+
+**Do some .NET built-ins perform better than others?**
+With .NET 5.0, it doesn't matter. 
+Under .NET Core 2.1, Array.Copy and Buffer.MemoryCopy were much more optimized than the other built-ins. 
+
+**Does loop unrolling matter?**
+The AVX methods benefitted from unrolling once (to two-at-a-time), but there was minimal benefit to unrolling more.
+
+**Does AVX2 (Avx256) perform better than AVX (Avx128)?**
+Yes, if it's less than four threads and equally unrolled.
