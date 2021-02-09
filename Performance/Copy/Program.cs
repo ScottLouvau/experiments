@@ -10,16 +10,13 @@ namespace Copy
     class TestResult
     {
         public string FunctionName { get; set; }
-        public MeasureResult MeasureResult { get; set; }
-        public int Threads { get; set; }
+        public List<MeasureResult> Results { get; set; }
+        public double FastestSecondsPerIteration => Results.Min((r) => r.SecondsPerIteration);
 
-        public string DisplayName => (Threads == 1 ? FunctionName : $"{FunctionName} {Threads}t");
-
-        public TestResult(string functionName, MeasureResult measureResult, int threads = 1)
+        public TestResult(string functionName, List<MeasureResult> results)
         {
             FunctionName = functionName;
-            MeasureResult = measureResult;
-            Threads = threads;
+            Results = results;
         }
     }
 
@@ -27,9 +24,9 @@ namespace Copy
     {
         static void Main(string[] args)
         {
-            int threadLimit = (args.Length > 0 ? int.Parse(args[0]) : Environment.ProcessorCount);
-            string methodName = (args.Length > 1 ? args[1] : null);
-            int seconds = (args.Length > 2 ? int.Parse(args[2]) : 5);
+            double seconds = (args.Length > 0 ? double.Parse(args[0]) : 5);
+            int threadLimit = (args.Length > 1 ? int.Parse(args[1]) : Environment.ProcessorCount);
+            string methodName = (args.Length > 2 ? args[2] : null);
 
             Console.WriteLine("Running Copy Performance Tests...");
 
@@ -50,61 +47,60 @@ namespace Copy
             }
 
             MeasureSettings settings = new MeasureSettings(TimeSpan.FromSeconds(seconds), 5, 1000000, false);
-            ConsoleTable table = BuildTable();
-            List<TestResult> results = new List<TestResult>();
+            ConsoleTable table = BuildTable(threadLimit);
 
             foreach (var method in methods)
             {
+                List<MeasureResult> results = new List<MeasureResult>();
+
                 for (int threads = 1; threads <= threadLimit; threads *= 2)
                 {
                     CopyTests.CopyKernel kernel = cpt.Parallelize(method.Value, threads);
-
-                    TestResult current = new TestResult(
-                        method.Key,
-                        Measure.Operation(() => cpt.Run(kernel), settings),
-                        threads
-                    );
+                    results.Add(Measure.Operation(() => cpt.Run(kernel), settings));
 
                     bool identical = cpt.VerifyIdentical();
                     cpt.Clear();
 
                     if (!identical)
                     {
-                        Console.WriteLine($"ERROR: {current.DisplayName} did not correctly copy bytes.");
+                        Console.WriteLine($"ERROR: {method.Key} did not correctly copy bytes.");
                         return;
                     }
-
-                    table.AppendRow(RenderRow(current));
-                    results.Add(current);
                 }
+
+                table.AppendRow(RenderRow(new TestResult(method.Key, results)));
             }
+        }
 
-            // Re-write results sorted by performance ascending
-            Console.WriteLine();
-            Console.WriteLine("Sorted by Performance: ");
+        private static ConsoleTable BuildTable(int threadLimit)
+        {
+            List<TableCell> columns = new List<TableCell>();
+            columns.Add(new TableCell("Method"));
 
-            table = BuildTable();
-            foreach (TestResult result in results.OrderByDescending((r) => r.MeasureResult.SecondsPerIteration))
+            for (int threads = 1; threads <= threadLimit; threads *= 2)
             {
-                table.AppendRow(RenderRow(result));
+                columns.Add(new TableCell($"Speed [{threads}T]", Align.Right));
             }
+
+            return new ConsoleTable(columns);
         }
 
-        private static ConsoleTable BuildTable()
+        private static TableCell[] RenderRow(TestResult result)
         {
-            return new ConsoleTable(
-                new TableCell("Method [+ threads]"),
-                new TableCell("Speed", Align.Right, TableColor.Green),
-                new TableCell($"Per {Format.Size(CopyTests.Length)}", Align.Right));
-        }
+            List<TableCell> cells = new List<TableCell>();
 
-        private static string[] RenderRow(TestResult result)
-        {
-            return new string[] {
-                result.DisplayName,
-                Format.Rate(CopyTests.Length, result.MeasureResult.SecondsPerIteration),
-                Format.Time(result.MeasureResult.SecondsPerIteration)
-            };
+            cells.Add(new TableCell(result.FunctionName));
+
+            foreach(MeasureResult measurement in result.Results)
+            {
+                cells.Add(new TableCell(
+                    Format.Rate(CopyTests.Length, measurement.SecondsPerIteration),
+                    Align.Right,
+                    (measurement.SecondsPerIteration == result.FastestSecondsPerIteration ? TableColor.Green : TableColor.Default)
+                ));
+            }
+
+            return cells.ToArray();
         }
     }
 }

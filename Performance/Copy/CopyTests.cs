@@ -52,10 +52,13 @@ namespace Copy
             return (source, target, index, lengthInBytes) =>
             {
                 int slice = lengthInBytes / partitions;
+
                 Parallel.For(0, partitions, (i) =>
                 {
                     kernel(source, target, i * slice, slice);
                 });
+
+                CopyByByte(source, target, partitions * slice, lengthInBytes);
             };
         }
 
@@ -117,19 +120,7 @@ namespace Copy
 
         // ==============================================================================================
 
-        // ~2 GB/s
-
-        [Benchmark]
-        public void ForByte(byte[] source, byte[] target, int index, int lengthInBytes)
-        {
-            for (int i = index; i < index + lengthInBytes; ++i)
-            {
-                target[i] = source[i];
-            }
-        }
-
-
-        // ~ 8 GB/s
+        // .NET Built-Ins
 
         [Benchmark]
         public void ArrayCopy(byte[] source, byte[] target, int index, int lengthInBytes)
@@ -147,6 +138,48 @@ namespace Copy
         public unsafe void BufferMemoryCopy(byte* source, byte* target, int lengthInBytes)
         {
             Buffer.MemoryCopy(source, target, lengthInBytes, lengthInBytes);
+        }
+
+        [Benchmark]
+        public void AsSpanCopy(byte[] source, byte[] target, int index, int lengthInBytes)
+        {
+            source.AsSpan().Slice(index, lengthInBytes).CopyTo(target.AsSpan().Slice(index, lengthInBytes));
+        }
+
+        [Benchmark]
+        public void UnsafeCopyBlock(byte[] source, byte[] target, int index, int lengthInBytes)
+        {
+            Unsafe.CopyBlock(ref source[index], ref target[index], (uint)lengthInBytes);
+        }
+
+        [Benchmark]
+        public void UnsafeCopyBlockUnaligned(byte[] source, byte[] target, int index, int lengthInBytes)
+        {
+            Unsafe.CopyBlockUnaligned(ref source[index], ref target[index], (uint)lengthInBytes);
+        }
+
+        // ----------------------------------------------------------------------------------------
+        // P/Invoke to memcpy
+
+        [Benchmark]
+        public unsafe void Memcpy(byte* source, byte* target, int lengthInBytes)
+        {
+            memcpy((IntPtr)target, (IntPtr)source, lengthInBytes);
+        }
+
+        [DllImport("msvcrt.dll", SetLastError = false)]
+        public static extern IntPtr memcpy(IntPtr dest, IntPtr src, int count);
+
+        // ----------------------------------------------------------------------------------------
+        // Hand coded loops
+
+        [Benchmark]
+        public void ForByte(byte[] source, byte[] target, int index, int lengthInBytes)
+        {
+            for (int i = index; i < index + lengthInBytes; ++i)
+            {
+                target[i] = source[i];
+            }
         }
 
         [Benchmark]
@@ -197,13 +230,16 @@ namespace Copy
             CopyByByte((byte*)from, (byte*)to, (byte*)toEnd);
         }
 
+        // ----------------------------------------------------------------------------------------
+        // SSE / AVX / AVX2
+
         [Benchmark]
         public unsafe void LoadUStoreU(byte* source, byte* target, int lengthInBytes)
         {
             // Recommendation from Peter Cordes in https://stackoverflow.com/questions/39153868/vectorized-memcpy-that-beats-intel-fast-memcpy
+            byte* toEnd = &target[lengthInBytes];
             float* from = (float*)source;
             float* to = (float*)target;
-            float* toEnd = (float*)(&target[lengthInBytes]);
 
             for (int i = 0; i + 16 <= lengthInBytes; i += 16)
             {
@@ -213,7 +249,7 @@ namespace Copy
                 to += 4;
             }
 
-            CopyByByte((byte*)from, (byte*)to, (byte*)toEnd);
+            CopyByByte((byte*)from, (byte*)to, toEnd);
         }
 
         [Benchmark]
@@ -251,9 +287,10 @@ namespace Copy
         [Benchmark]
         public unsafe void StoreNonTemporalInt(byte* source, byte* target, int lengthInBytes)
         {
+            byte* toEnd = &target[lengthInBytes];
+
             uint* from = (uint*)source;
             uint* to = (uint*)target;
-            uint* toEnd = (uint*)(&target[lengthInBytes]);
             int length = lengthInBytes / 4;
 
             for (int i = 0; i < length; ++i)
@@ -261,15 +298,16 @@ namespace Copy
                 Avx.StoreNonTemporal(&to[i], from[i]);
             }
 
-            CopyByByte((byte*)from, (byte*)to, (byte*)toEnd);
+            CopyByByte((byte*)&from[length], (byte*)&to[length], toEnd);
         }
 
         [Benchmark]
         public unsafe void StoreNonTemporalLong(byte* source, byte* target, int lengthInBytes)
         {
+            byte* toEnd = &target[lengthInBytes];
+
             ulong* from = (ulong*)source;
             ulong* to = (ulong*)target;
-            uint* toEnd = (uint*)(&target[lengthInBytes]);
             int length = lengthInBytes / 8;
 
             for (int i = 0; i < length; ++i)
@@ -277,7 +315,7 @@ namespace Copy
                 Sse2.X64.StoreNonTemporal(&to[i], from[i]);
             }
 
-            CopyByByte((byte*)from, (byte*)to, (byte*)toEnd);
+            CopyByByte((byte*)&from[length], (byte*)&to[length], toEnd);
         }
 
         [Benchmark]
@@ -385,36 +423,5 @@ namespace Copy
         //}
 
 
-        // ~11 GB/s
-
-        [Benchmark]
-        public unsafe void Memcpy(byte* source, byte* target, int lengthInBytes)
-        {
-            memcpy((IntPtr)target, (IntPtr)source, lengthInBytes);
-        }
-
-        [DllImport("msvcrt.dll", SetLastError = false)]
-        public static extern IntPtr memcpy(IntPtr dest, IntPtr src, int count);
-
-
-        // ~13 GB/s
-
-        [Benchmark]
-        public void AsSpanCopy(byte[] source, byte[] target, int index, int lengthInBytes)
-        {
-            source.AsSpan().Slice(index, lengthInBytes).CopyTo(target.AsSpan().Slice(index, lengthInBytes));
-        }
-
-        [Benchmark]
-        public void UnsafeCopyBlock(byte[] source, byte[] target, int index, int lengthInBytes)
-        {
-            Unsafe.CopyBlock(ref source[index], ref target[index], (uint)lengthInBytes);
-        }
-
-        [Benchmark]
-        public void UnsafeCopyBlockUnaligned(byte[] source, byte[] target, int index, int lengthInBytes)
-        {
-            Unsafe.CopyBlockUnaligned(ref source[index], ref target[index], (uint)lengthInBytes);
-        }
     }
 }
