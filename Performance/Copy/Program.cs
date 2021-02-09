@@ -27,12 +27,12 @@ namespace Copy
     {
         static void Main(string[] args)
         {
+            int threadLimit = (args.Length > 0 ? int.Parse(args[0]) : Environment.ProcessorCount);
+            string methodName = (args.Length > 1 ? args[1] : null);
+            int seconds = (args.Length > 2 ? int.Parse(args[2]) : 5);
+
             Console.WriteLine("Running Copy Performance Tests...");
 
-            // Measure each implementation for two seconds, up to 10k executions
-            MeasureSettings settings = new MeasureSettings(TimeSpan.FromSeconds(2), 5, 10000, false);
-
-            // Run all tests on this class
             CopyTests cpt = new CopyTests();
 
             // Find all 'CopyKernel' signature benchmark methods to test
@@ -44,16 +44,18 @@ namespace Copy
                 methods[pair.Key] = cpt.Wrap(pair.Value);
             }
 
+            if (methodName != null)
+            {
+                methods = new Dictionary<string, CopyTests.CopyKernel>(methods.Where((m) => m.Key.Contains(methodName, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            MeasureSettings settings = new MeasureSettings(TimeSpan.FromSeconds(seconds), 5, 1000000, false);
             ConsoleTable table = BuildTable();
             List<TestResult> results = new List<TestResult>();
-            int threadCount = Environment.ProcessorCount;
 
             foreach (var method in methods)
             {
-                TestResult last = null;
-
-                // Run each method single and multi-threaded until it's not more than 10% faster
-                for (int threads = 1; threads <= threadCount; threads *= 2)
+                for (int threads = 1; threads <= threadLimit; threads *= 2)
                 {
                     CopyTests.CopyKernel kernel = cpt.Parallelize(method.Value, threads);
 
@@ -63,24 +65,17 @@ namespace Copy
                         threads
                     );
 
-                    bool identical = cpt.VerifyIdentical();
+                    //bool identical = cpt.VerifyIdentical();
                     cpt.Clear();
 
-                    if (!identical)
-                    {
-                        Console.WriteLine($"ERROR: {current.DisplayName} did not correctly copy bytes.");
-                        return;
-                    }
+                    //if (!identical)
+                    //{
+                    //    Console.WriteLine($"ERROR: {current.DisplayName} did not correctly copy bytes.");
+                    //    return;
+                    //}
 
                     table.AppendRow(RenderRow(current));
                     results.Add(current);
-
-                    if (last != null && current.MeasureResult.SecondsPerIteration > last.MeasureResult.SecondsPerIteration * 0.9)
-                    {
-                        break;
-                    }
-
-                    last = current;
                 }
             }
 

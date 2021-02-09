@@ -4,6 +4,7 @@ using RoughBench.Attributes;
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using System.Threading.Tasks;
 
@@ -11,7 +12,7 @@ namespace Copy
 {
     public class CopyTests
     {
-        public const int Length = 32 * 1024 * 1024;
+        public const int Length = 64 * 1024 * 1024;
         private byte[] Source;
         private byte[] Target;
 
@@ -93,6 +94,19 @@ namespace Copy
                 *target++ = *source++;
                 lengthInBytes--;
             }
+        }
+
+
+        // Methods which require target pointer alignment can run this first to copy any unaligned prefix
+        protected unsafe void ForceBothAligned(ref byte* source, ref byte* target, ref int lengthInBytes)
+        {
+            long sourceOffset = ((long)source & 0x3F);
+            long targetOffset = ((long)target & 0x3F);
+
+            source += 0x40 - sourceOffset;
+            target += 0x40 - targetOffset;
+
+            lengthInBytes -= (int)Math.Max(0x40 - sourceOffset, 0x40 - targetOffset);
         }
 
         // ==============================================================================================
@@ -248,6 +262,91 @@ namespace Copy
                 target += 16;
             }
         }
+
+        [Benchmark]
+        public unsafe void StoreNonTemporalAvx256UnrolledAligned(byte* source, byte* target, int lengthInBytes)
+        {
+            //CopyUntilAligned(ref source, ref target, ref lengthInBytes);
+            ForceBothAligned(ref source, ref target, ref lengthInBytes);
+
+            float* from = (float*)source;
+            float* to = (float*)target;
+            int lengthInFloats = lengthInBytes / 4;
+
+            for (int i = 0; i + 128 <= lengthInFloats; i += 128)
+            {
+                Vector256<float> ymm0 = Avx.LoadAlignedVector256(from + 0);
+                Vector256<float> ymm1 = Avx.LoadAlignedVector256(from + 8);
+                Vector256<float> ymm2 = Avx.LoadAlignedVector256(from + 16);
+                Vector256<float> ymm3 = Avx.LoadAlignedVector256(from + 24);
+                Vector256<float> ymm4 = Avx.LoadAlignedVector256(from + 32);
+                Vector256<float> ymm5 = Avx.LoadAlignedVector256(from + 40);
+                Vector256<float> ymm6 = Avx.LoadAlignedVector256(from + 48);
+                Vector256<float> ymm7 = Avx.LoadAlignedVector256(from + 56);
+                Vector256<float> ymm8 = Avx.LoadAlignedVector256(from + 64);
+                Vector256<float> ymm9 = Avx.LoadAlignedVector256(from + 72);
+                Vector256<float> ymm10 = Avx.LoadAlignedVector256(from + 80);
+                Vector256<float> ymm11 = Avx.LoadAlignedVector256(from + 88);
+                Vector256<float> ymm12 = Avx.LoadAlignedVector256(from + 96);
+                Vector256<float> ymm13 = Avx.LoadAlignedVector256(from + 104);
+                Vector256<float> ymm14 = Avx.LoadAlignedVector256(from + 112);
+                Vector256<float> ymm15 = Avx.LoadAlignedVector256(from + 120);
+
+                Avx.StoreAlignedNonTemporal(to + 0, ymm0);
+                Avx.StoreAlignedNonTemporal(to + 8, ymm1);
+                Avx.StoreAlignedNonTemporal(to + 16, ymm2);
+                Avx.StoreAlignedNonTemporal(to + 24, ymm3);
+                Avx.StoreAlignedNonTemporal(to + 32, ymm4);
+                Avx.StoreAlignedNonTemporal(to + 40, ymm5);
+                Avx.StoreAlignedNonTemporal(to + 48, ymm6);
+                Avx.StoreAlignedNonTemporal(to + 56, ymm7);
+                Avx.StoreAlignedNonTemporal(to + 64, ymm8);
+                Avx.StoreAlignedNonTemporal(to + 72, ymm9);
+                Avx.StoreAlignedNonTemporal(to + 80, ymm10);
+                Avx.StoreAlignedNonTemporal(to + 88, ymm11);
+                Avx.StoreAlignedNonTemporal(to + 96, ymm12);
+                Avx.StoreAlignedNonTemporal(to + 104, ymm13);
+                Avx.StoreAlignedNonTemporal(to + 112, ymm14);
+                Avx.StoreAlignedNonTemporal(to + 120, ymm15);
+
+                from += 128;
+                to += 128;
+            }
+        }
+
+        //[Benchmark]
+        //public unsafe void StoreNonTemporalAvx256UnrolledAligned(byte* source, byte* target, int lengthInBytes)
+        //{
+        //    CopyUntilAligned(ref source, ref target, ref lengthInBytes);
+
+        //    float* from = (float*)source;
+        //    float* to = (float*)target;
+        //    int lengthInFloats = lengthInBytes / 4;
+
+        //    for (int i = 0; i + 64 <= lengthInFloats; i += 64)
+        //    {
+        //        Vector256<float> ymm0 = Avx.LoadVector256(from + 0);
+        //        Vector256<float> ymm1 = Avx.LoadVector256(from + 8);
+        //        Vector256<float> ymm2 = Avx.LoadVector256(from + 16);
+        //        Vector256<float> ymm3 = Avx.LoadVector256(from + 24);
+        //        Vector256<float> ymm4 = Avx.LoadVector256(from + 32);
+        //        Vector256<float> ymm5 = Avx.LoadVector256(from + 40);
+        //        Vector256<float> ymm6 = Avx.LoadVector256(from + 48);
+        //        Vector256<float> ymm7 = Avx.LoadVector256(from + 56);
+
+        //        Avx.StoreAlignedNonTemporal(to + 0, ymm0);
+        //        Avx.StoreAlignedNonTemporal(to + 8, ymm1);
+        //        Avx.StoreAlignedNonTemporal(to + 16, ymm2);
+        //        Avx.StoreAlignedNonTemporal(to + 24, ymm3);
+        //        Avx.StoreAlignedNonTemporal(to + 32, ymm4);
+        //        Avx.StoreAlignedNonTemporal(to + 40, ymm5);
+        //        Avx.StoreAlignedNonTemporal(to + 48, ymm6);
+        //        Avx.StoreAlignedNonTemporal(to + 56, ymm7);
+
+        //        from += 64;
+        //        to += 64;
+        //    }
+        //}
 
 
         // ~11 GB/s
