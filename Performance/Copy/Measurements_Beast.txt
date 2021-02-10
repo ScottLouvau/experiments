@@ -1,0 +1,47 @@
+.NET Core 1.1
+Running Copy Performance Tests [.NET Core 4.6.27618.02 on BEAST]...
+
+ | Method                   | Speed [1T] | Speed [2T] | Speed [4T] |
+ | ------------------------ | ---------: | ---------: | ---------: |
+ | ArrayCopy                |  9.46 GB/s |  11.4 GB/s |  11.7 GB/s |
+ | BufferBlockCopy          |  9.49 GB/s |  11.4 GB/s |  11.7 GB/s |
+ | UnsafeCopyBlock          |  10.5 GB/s |  14.3 GB/s |  13.5 GB/s |
+ | UnsafeCopyBlockUnaligned |  10.5 GB/s |  14.3 GB/s |  13.6 GB/s |
+ | ForByte                  |  1.71 GB/s |  3.41 GB/s |  6.51 GB/s |
+ | ForUnsafeAsLong          |  9.42 GB/s |  10.5 GB/s |  9.76 GB/s |
+ | BufferMemoryCopy         |  9.62 GB/s |  11.6 GB/s |  11.9 GB/s |
+ | Memcpy                   |  14.0 GB/s |  14.4 GB/s |  13.1 GB/s |
+ | UnsafeForLong            |  9.42 GB/s |  10.4 GB/s |  9.66 GB/s |
+ | UnsafeWhileLong          |  9.67 GB/s |  10.5 GB/s |  9.79 GB/s |
+
+.NET Core 2.1
+Running Copy Performance Tests [.NET Core 4.6.29518.01 on BEAST]...
+
+ | Method                   | Speed [1T] | Speed [2T] | Speed [4T] |
+ | ------------------------ | ---------: | ---------: | ---------: |
+ | ArrayCopy                |  9.33 GB/s |  11.3 GB/s |  11.9 GB/s |
+ | BufferBlockCopy          |  9.47 GB/s |  11.4 GB/s |  11.9 GB/s |
+ | UnsafeCopyBlock          |  9.60 GB/s |  11.8 GB/s |  12.1 GB/s |
+ | UnsafeCopyBlockUnaligned |  9.61 GB/s |  11.8 GB/s |  11.9 GB/s |
+ | ForByte                  |  1.71 GB/s |  3.41 GB/s |  6.62 GB/s |
+ | ForUnsafeAsLong          |  9.37 GB/s |  10.6 GB/s |  9.86 GB/s |
+ | BufferMemoryCopy         |  9.64 GB/s |  11.7 GB/s |  12.1 GB/s |
+ | Memcpy                   |  14.0 GB/s |  14.3 GB/s |  13.2 GB/s |
+ | UnsafeForLong            |  9.37 GB/s |  10.6 GB/s |  9.85 GB/s |
+ | UnsafeWhileLong          |  9.65 GB/s |  10.7 GB/s |  9.97 GB/s |
+
+
+Running Copy Performance Tests [.NET Core 3.1.11 on BEAST]...
+
+ | Method                   | Speed [1T] | Speed [2T] | Speed [4T] |
+ | ------------------------ | ---------: | ---------: | ---------: |
+ | ArrayCopy                |  9.50 GB/s |  11.5 GB/s |  11.9 GB/s |
+ | BufferBlockCopy          |  9.50 GB/s |  11.5 GB/s |  11.9 GB/s |
+ | UnsafeCopyBlock          |  9.57 GB/s |  11.7 GB/s |  12.0 GB/s |
+ | UnsafeCopyBlockUnaligned |  9.59 GB/s |  11.5 GB/s |  11.0 GB/s |
+ | ForByte                  |  1.91 GB/s |  3.82 GB/s |  7.40 GB/s |
+ | ForUnsafeAsLong          |  8.98 GB/s |  10.4 GB/s |  9.79 GB/s |
+ | BufferMemoryCopy         |  9.65 GB/s |  11.8 GB/s |  12.1 GB/s |
+ | Memcpy                   |  14.0 GB/s |  13.9 GB/s |  13.3 GB/s |
+ | UnsafeForLong            |  8.73 GB/s |  10.4 GB/s |  9.81 GB/s |
+ | UnsafeWhileLong          |  8.21 GB/s |  10.3 GB/s |  9.79 GB/s |
