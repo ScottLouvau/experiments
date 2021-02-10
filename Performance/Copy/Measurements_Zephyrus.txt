@@ -1,0 +1,93 @@
+.NET Core 1.1
+Running Copy Performance Tests [.NET Core 4.6.27618.02 on ZEPHYRUS]...
+
+ | Method                   | Speed [1T] | Speed [2T] | Speed [4T] | Speed [8T] | Speed [16T] |
+ | ------------------------ | ---------: | ---------: | ---------: | ---------: | ----------: |
+ | ArrayCopy                |  12.7 GB/s |  17.0 GB/s |  17.7 GB/s |  18.7 GB/s |   17.8 GB/s |
+ | BufferBlockCopy          |  12.7 GB/s |  17.1 GB/s |  18.2 GB/s |  18.7 GB/s |   17.8 GB/s |
+ | UnsafeCopyBlock          |  10.9 GB/s |  15.2 GB/s |  17.4 GB/s |  18.1 GB/s |   17.7 GB/s |
+ | UnsafeCopyBlockUnaligned |  11.0 GB/s |  15.2 GB/s |  17.3 GB/s |  18.1 GB/s |   17.7 GB/s |
+ | ForByte                  |  2.00 GB/s |  3.98 GB/s |  7.18 GB/s |  9.83 GB/s |   9.64 GB/s |
+ | ForUnsafeAsLong          |  7.81 GB/s |  10.2 GB/s |  10.6 GB/s |  10.5 GB/s |   9.69 GB/s |
+ | BufferMemoryCopy         |  12.7 GB/s |  17.1 GB/s |  18.2 GB/s |  18.6 GB/s |   17.9 GB/s |
+ | Memcpy                   |  11.8 GB/s |  16.5 GB/s |  18.0 GB/s |  18.8 GB/s |   18.0 GB/s |
+ | UnsafeForLong            |  7.94 GB/s |  10.2 GB/s |  10.5 GB/s |  10.5 GB/s |   9.74 GB/s |
+ | UnsafeWhileLong          |  7.85 GB/s |  10.3 GB/s |  10.5 GB/s |  10.5 GB/s |   9.56 GB/s |
+
+.NET Core 2.1
+Running Copy Performance Tests [.NET Core 4.6.29518.01 on ZEPHYRUS]...
+
+ | Method                   | Speed [1T] | Speed [2T] | Speed [4T] | Speed [8T] | Speed [16T] |
+ | ------------------------ | ---------: | ---------: | ---------: | ---------: | ----------: |
+ | ArrayCopy                |  12.7 GB/s |  17.1 GB/s |  18.2 GB/s |  19.0 GB/s |   18.0 GB/s |
+ | BufferBlockCopy          |  6.93 GB/s |  9.92 GB/s |  11.2 GB/s |  11.0 GB/s |   10.5 GB/s |
+ | UnsafeCopyBlock          |  6.96 GB/s |  9.89 GB/s |  11.3 GB/s |  11.1 GB/s |   10.5 GB/s |
+ | UnsafeCopyBlockUnaligned |  6.95 GB/s |  9.92 GB/s |  11.3 GB/s |  11.1 GB/s |   10.5 GB/s |
+ | ForByte                  |  1.99 GB/s |  3.94 GB/s |  7.45 GB/s |  10.2 GB/s |   9.16 GB/s |
+ | ForUnsafeAsLong          |  7.72 GB/s |  10.0 GB/s |  10.6 GB/s |  10.5 GB/s |   9.70 GB/s |
+ | BufferMemoryCopy         |  12.7 GB/s |  17.0 GB/s |  18.2 GB/s |  19.0 GB/s |   18.0 GB/s |
+ | Memcpy                   |  11.8 GB/s |  16.7 GB/s |  18.1 GB/s |  19.0 GB/s |   18.1 GB/s |
+ | UnsafeForLong            |  7.88 GB/s |  10.3 GB/s |  10.4 GB/s |  10.5 GB/s |   9.71 GB/s |
+ | UnsafeWhileLong          |  7.85 GB/s |  10.3 GB/s |  10.3 GB/s |  10.5 GB/s |   9.72 GB/s |
+
+Running Copy Performance Tests [.NET Core 3.1.11 on ZEPHYRUS]...
+
+ | Method                               | Speed [1T] | Speed [2T] | Speed [4T] | Speed [8T] | Speed [16T] |
+ | ------------------------------------ | ---------: | ---------: | ---------: | ---------: | ----------: |
+ | ArrayCopy                            |  12.7 GB/s |  16.9 GB/s |  18.1 GB/s |  18.9 GB/s |   18.0 GB/s |
+ | BufferBlockCopy                      |  12.7 GB/s |  16.9 GB/s |  18.2 GB/s |  18.9 GB/s |   18.0 GB/s |
+ | AsSpanCopy                           |  12.7 GB/s |  16.9 GB/s |  18.2 GB/s |  18.9 GB/s |   18.0 GB/s |
+ | UnsafeCopyBlock                      |  12.7 GB/s |  17.0 GB/s |  18.1 GB/s |  19.0 GB/s |   18.0 GB/s |
+ | UnsafeCopyBlockUnaligned             |  12.7 GB/s |  17.0 GB/s |  18.2 GB/s |  19.0 GB/s |   18.0 GB/s |
+ | ForByte                              |  2.00 GB/s |  3.92 GB/s |  7.39 GB/s |  9.99 GB/s |   9.59 GB/s |
+ | ForUnsafeAsLong                      |  7.86 GB/s |  10.1 GB/s |  10.5 GB/s |  10.5 GB/s |   9.65 GB/s |
+ | BufferMemoryCopy                     |  12.7 GB/s |  16.9 GB/s |  18.2 GB/s |  18.9 GB/s |   18.0 GB/s |
+ | Memcpy                               |  11.5 GB/s |  16.8 GB/s |  18.0 GB/s |  18.9 GB/s |   18.2 GB/s |
+ | UnsafeForLong                        |  7.92 GB/s |  10.3 GB/s |  10.5 GB/s |  10.5 GB/s |   9.69 GB/s |
+ | UnsafeWhileLong                      |  7.96 GB/s |  10.4 GB/s |  10.5 GB/s |  10.5 GB/s |   9.70 GB/s |
+ | Avx128_LoadStore                     |  8.75 GB/s |  10.6 GB/s |  10.5 GB/s |  10.5 GB/s |   9.65 GB/s |
+ | Avx256_LoadStore                     |  8.92 GB/s |  10.7 GB/s |  10.6 GB/s |  10.5 GB/s |   9.67 GB/s |
+ | StoreNonTemporalInt                  |  9.17 GB/s |  13.7 GB/s |  17.2 GB/s |  17.9 GB/s |   17.4 GB/s |
+ | StoreNonTemporalLong                 |  10.8 GB/s |  15.2 GB/s |  17.8 GB/s |  18.4 GB/s |   17.5 GB/s |
+ | StoreNonTemporalLong_Unrolled2       |  11.0 GB/s |  15.2 GB/s |  17.8 GB/s |  18.4 GB/s |   17.6 GB/s |
+ | StoreNonTemporalLong_Unrolled4       |  10.9 GB/s |  15.2 GB/s |  17.7 GB/s |  18.4 GB/s |   17.5 GB/s |
+ | Avx128_StoreNonTemporal              |  7.02 GB/s |  13.0 GB/s |  17.1 GB/s |  18.1 GB/s |   17.5 GB/s |
+ | Avx128_StoreNonTemporal_Unrolled2    |  9.50 GB/s |  14.8 GB/s |  17.7 GB/s |  18.3 GB/s |   17.5 GB/s |
+ | Avx128_StoreNonTemporal_Unrolled2v2  |  9.53 GB/s |  13.3 GB/s |  17.0 GB/s |  18.3 GB/s |   17.4 GB/s |
+ | Avx128_StoreNonTemporal_Unrolled4v2  |  10.7 GB/s |  14.9 GB/s |  17.7 GB/s |  18.4 GB/s |   17.5 GB/s |
+ | Avx256_StoreNonTemporal              |  10.3 GB/s |  15.2 GB/s |  17.6 GB/s |  18.3 GB/s |   17.5 GB/s |
+ | Avx256_StoreNonTemporal_Unrolled2v2  |  11.1 GB/s |  15.6 GB/s |  17.7 GB/s |  18.4 GB/s |   17.6 GB/s |
+ | Avx256_StoreNonTemporal_Unrolled4v2  |  11.2 GB/s |  15.9 GB/s |  17.7 GB/s |  18.3 GB/s |   17.6 GB/s |
+ | Avx256_StoreNonTemporal_Unrolled8v2  |  12.5 GB/s |  16.7 GB/s |  17.5 GB/s |  18.3 GB/s |   17.5 GB/s |
+ | Avx256_StoreNonTemporal_Unrolled16v2 |  12.4 GB/s |  16.7 GB/s |  17.7 GB/s |  18.3 GB/s |   17.5 GB/s |
+
+Running Copy Performance Tests [.NET 5.0.2 on ZEPHYRUS]...
+
+ | Method                               | Speed [1T] | Speed [2T] | Speed [4T] | Speed [8T] | Speed [16T] |
+ | ------------------------------------ | ---------: | ---------: | ---------: | ---------: | ----------: |
+ | ArrayCopy                            |  12.7 GB/s |  16.9 GB/s |  18.2 GB/s |  18.9 GB/s |   18.0 GB/s |
+ | BufferBlockCopy                      |  12.7 GB/s |  16.9 GB/s |  18.2 GB/s |  18.9 GB/s |   18.0 GB/s |
+ | AsSpanCopy                           |  12.7 GB/s |  16.9 GB/s |  18.2 GB/s |  18.6 GB/s |   18.0 GB/s |
+ | UnsafeCopyBlock                      |  12.7 GB/s |  17.0 GB/s |  18.1 GB/s |  19.1 GB/s |   18.0 GB/s |
+ | UnsafeCopyBlockUnaligned             |  12.7 GB/s |  17.0 GB/s |  18.1 GB/s |  19.0 GB/s |   18.0 GB/s |
+ | ForByte                              |  1.95 GB/s |  3.79 GB/s |  7.04 GB/s |  10.3 GB/s |   9.59 GB/s |
+ | ForUnsafeAsLong                      |  7.83 GB/s |  10.3 GB/s |  10.5 GB/s |  10.5 GB/s |   9.70 GB/s |
+ | BufferMemoryCopy                     |  12.7 GB/s |  17.0 GB/s |  18.2 GB/s |  19.0 GB/s |   18.0 GB/s |
+ | Memcpy                               |  11.5 GB/s |  16.3 GB/s |  18.0 GB/s |  19.0 GB/s |   18.2 GB/s |
+ | UnsafeForLong                        |  7.43 GB/s |  9.89 GB/s |  10.5 GB/s |  10.5 GB/s |   9.73 GB/s |
+ | UnsafeWhileLong                      |  7.41 GB/s |  10.1 GB/s |  10.4 GB/s |  10.5 GB/s |   9.76 GB/s |
+ | Avx128_LoadStore                     |  8.81 GB/s |  10.6 GB/s |  10.8 GB/s |  10.5 GB/s |   9.64 GB/s |
+ | Avx256_LoadStore                     |  8.73 GB/s |  10.6 GB/s |  10.5 GB/s |  10.5 GB/s |   9.66 GB/s |
+ | StoreNonTemporalInt                  |  9.01 GB/s |  13.8 GB/s |  17.3 GB/s |  18.1 GB/s |   17.4 GB/s |
+ | StoreNonTemporalLong                 |  10.8 GB/s |  15.4 GB/s |  17.8 GB/s |  18.5 GB/s |   17.5 GB/s |
+ | StoreNonTemporalLong_Unrolled2       |  11.0 GB/s |  15.3 GB/s |  17.8 GB/s |  18.4 GB/s |   17.5 GB/s |
+ | StoreNonTemporalLong_Unrolled4       |  11.0 GB/s |  15.3 GB/s |  17.8 GB/s |  18.4 GB/s |   17.6 GB/s |
+ | Avx128_StoreNonTemporal              |  7.19 GB/s |  12.8 GB/s |  17.6 GB/s |  18.2 GB/s |   17.5 GB/s |
+ | Avx128_StoreNonTemporal_Unrolled2    |  9.65 GB/s |  14.9 GB/s |  17.7 GB/s |  18.4 GB/s |   17.6 GB/s |
+ | Avx128_StoreNonTemporal_Unrolled2v2  |  9.90 GB/s |  14.7 GB/s |  17.8 GB/s |  18.3 GB/s |   17.4 GB/s |
+ | Avx128_StoreNonTemporal_Unrolled4v2  |  10.7 GB/s |  15.1 GB/s |  17.8 GB/s |  18.4 GB/s |   17.6 GB/s |
+ | Avx256_StoreNonTemporal              |  10.3 GB/s |  14.1 GB/s |  17.0 GB/s |  18.4 GB/s |   17.5 GB/s |
+ | Avx256_StoreNonTemporal_Unrolled2v2  |  11.0 GB/s |  15.2 GB/s |  17.6 GB/s |  18.4 GB/s |   17.6 GB/s |
+ | Avx256_StoreNonTemporal_Unrolled4v2  |  11.3 GB/s |  15.3 GB/s |  17.7 GB/s |  18.3 GB/s |   17.5 GB/s |
+ | Avx256_StoreNonTemporal_Unrolled8v2  |  12.5 GB/s |  16.6 GB/s |  17.7 GB/s |  18.4 GB/s |   17.6 GB/s |
+ | Avx256_StoreNonTemporal_Unrolled16v2 |  12.5 GB/s |  16.8 GB/s |  17.7 GB/s |  18.4 GB/s |   17.6 GB/s |
