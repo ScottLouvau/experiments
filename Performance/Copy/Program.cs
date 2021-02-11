@@ -27,24 +27,29 @@ namespace Copy
         {
             double seconds = (args.Length > 0 ? double.Parse(args[0]) : 5);
             int threadLimit = (args.Length > 1 ? int.Parse(args[1]) : Environment.ProcessorCount);
-            string methodName = (args.Length > 2 ? args[2] : null);
+            string methodNameContains = (args.Length > 2 ? args[2] : null);
 
-            Console.WriteLine($"Running Copy Performance Tests [{RuntimeInformation.FrameworkDescription} on {Environment.MachineName}]...");
+            RunAll(new CopyBuiltIns(), seconds, threadLimit, methodNameContains);
+            RunAll(new CopyLoops(), seconds, threadLimit, methodNameContains);
+            RunAll(new CopyAvx(), seconds, threadLimit, methodNameContains);
+            RunAll(new CopyNonTemporal(), seconds, threadLimit, methodNameContains);
+            RunAll(new CopyTestsUnrolled(), seconds, threadLimit, methodNameContains);
+        }
 
-            CopyTests cpt = new CopyTests();
-
+        private static void RunAll(CopyTestBase instance, double seconds, int threadLimit, string methodNameContains = null)
+        {
             // Find all 'CopyKernel' signature benchmark methods to test
-            Dictionary<string, CopyTests.CopyKernel> methods = BenchmarkReflector.BenchmarkMethods<CopyTests.CopyKernel>(cpt.GetType(), cpt);
+            Dictionary<string, CopyTestBase.CopyKernel> methods = BenchmarkReflector.BenchmarkMethods<CopyTestBase.CopyKernel>(instance.GetType(), instance);
 
             // Find all 'UnsafeCopyKernel' methods, wrap them, and include them
-            foreach (var pair in BenchmarkReflector.BenchmarkMethods<CopyTests.UnsafeCopyKernel>(cpt.GetType(), cpt))
+            foreach (var pair in BenchmarkReflector.BenchmarkMethods<CopyTestBase.UnsafeCopyKernel>(instance.GetType(), instance))
             {
-                methods[pair.Key] = cpt.Wrap(pair.Value);
+                methods[pair.Key] = instance.Wrap(pair.Value);
             }
 
-            if (methodName != null)
+            if (methodNameContains != null)
             {
-                methods = methods.Where((m) => m.Key.IndexOf(methodName, StringComparison.OrdinalIgnoreCase) >= 0).ToDictionary((m) => m.Key, (m) => m.Value);
+                methods = methods.Where((m) => m.Key.IndexOf(methodNameContains, StringComparison.OrdinalIgnoreCase) >= 0).ToDictionary((m) => m.Key, (m) => m.Value);
             }
 
             MeasureSettings settings = new MeasureSettings(TimeSpan.FromSeconds(seconds), 5, 1000000, false);
@@ -56,11 +61,11 @@ namespace Copy
 
                 for (int threads = 1; threads <= threadLimit; threads *= 2)
                 {
-                    CopyTests.CopyKernel kernel = cpt.Parallelize(method.Value, threads);
-                    results.Add(Measure.Operation(() => cpt.Run(kernel), settings));
+                    CopyTestBase.CopyKernel kernel = instance.Parallelize(method.Value, threads);
+                    results.Add(Measure.Operation(() => instance.Run(kernel), settings));
 
-                    bool identical = cpt.VerifyIdentical();
-                    cpt.Clear();
+                    bool identical = instance.VerifyIdentical();
+                    instance.Clear();
 
                     if (!identical)
                     {
@@ -76,7 +81,7 @@ namespace Copy
         private static ConsoleTable BuildTable(int threadLimit)
         {
             List<TableCell> columns = new List<TableCell>();
-            columns.Add(new TableCell("Method"));
+            columns.Add(new TableCell($"Method [{RuntimeInformation.FrameworkDescription} on {Environment.MachineName}]"));
 
             for (int threads = 1; threads <= threadLimit; threads *= 2)
             {
@@ -95,7 +100,7 @@ namespace Copy
             foreach(MeasureResult measurement in result.Results)
             {
                 cells.Add(new TableCell(
-                    Format.Rate(CopyTests.Length, measurement.SecondsPerIteration),
+                    Format.Rate(CopyTestBase.Length, measurement.SecondsPerIteration),
                     Align.Right,
                     (measurement.SecondsPerIteration == result.FastestSecondsPerIteration ? TableColor.Green : TableColor.Default)
                 ));

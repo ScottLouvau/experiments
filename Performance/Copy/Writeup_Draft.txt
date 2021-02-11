@@ -49,7 +49,7 @@ For a single-threaded copy, yes, this provides about a 15% speedup, but with the
 
 So why the slower peak speeds for all of these? The slowdown is because these methods are not using something called a "non-temporal store". Normally, the CPU assumes that you will use newly written values almost immediately, so it writes them to the CPU caches and then to memory. However, the CPU doesn't cache 8 bytes at a time - it reads 64 byte blocks into the cache. In order to update your 8 bytes, the CPU has to read a 64-byte cache line, overwrite the 8 bytes you're updating, and then write it back. This means the copying is actually turning into two reads and a write to memory, so we lose about 1/3 of our potential performance.
 
-Fortunately, .NET exposes some very low-level operations in the .Intrinsics namespaces, and non-temporal stores are almong them. How do those perform?
+Fortunately, .NET exposes some very low-level operations in the System.Runtime.Intrinsics namespaces, and non-temporal stores are almong them. How do those perform?
 
  | Method [.NET 5.0.2, ZEPHYRUS]        | Speed [1T] | Speed [2T] | Speed [4T] | Speed [8T] | Speed [16T] |
  | ------------------------------------ | ---------: | ---------: | ---------: | ---------: | ----------: |
@@ -58,7 +58,7 @@ Fortunately, .NET exposes some very low-level operations in the .Intrinsics name
  | Avx128_StoreNonTemporal              |  7.19 GB/s |  12.8 GB/s |  17.6 GB/s |  18.2 GB/s |   17.5 GB/s |
  | Avx256_StoreNonTemporal              |  10.3 GB/s |  14.1 GB/s |  17.0 GB/s |  18.4 GB/s |   17.5 GB/s |
 
-These options have slightly faster single threaded behavior, but the much bigger difference is that the maximum performance we see is now much closer to the 19.0 GB/s limit the built-in methods are able to hit. Interestingly, among these options I saw the best performance writing 8 bytes at a time with Sse2.X64.StoreNonTemporal(long*, long).
+These options have slightly faster single threaded behavior, but the much bigger difference is that the maximum performance we see is now much closer to the 19.0 GB/s limit the built-in methods are able to hit. Interestingly, Sse2.X64.StoreNonTemporal(long*, long) was the standout performer, particularly for one and two threads.
 
 Now, does unrolling these loops (reading and writing more than once per loop iteration) provide further speedups?
 
@@ -76,7 +76,48 @@ Now, does unrolling these loops (reading and writing more than once per loop ite
  | Avx256_StoreNonTemporal_Unrolled8    |  12.5 GB/s |  16.6 GB/s |  17.7 GB/s |  18.4 GB/s |   17.6 GB/s |
  | Avx256_StoreNonTemporal_Unrolled16   |  12.5 GB/s |  16.8 GB/s |  17.7 GB/s |  18.4 GB/s |   17.6 GB/s |
 
-When storing a long at a time, unrolling didn't seem to matter. For the Avx128 and Avx256 options, unrolling does speed up the one and two thread numbers, 
+Unrolling helps the AVX options when running one and two threaded. A highly unrolled AVX256 copy is the fastest hand-coded option, and is very close to the built-in method performance.
+
+So, what are my conclusions?
+* The built-in methods are great, at least for large copies.
+* They all perform equally on .NET 5.0.
+* The C# built-ins are comparable to memcpy and to memory benchmarks.
+* You'll see best performance with as many threads as you have physical cores.
+* You get nearly peak performance from just two threads (at least on my Ryzen 4900 HS and i7-7500 machines).
+
+If you need to write a very fast hand-coded copy (like a decompression loop), StoreNonTemporal(long*, long) or Avx.StoreAlignedNonTemporal(byte*, Vector256<byte>) are your best options, and you really want the code to run on at least two parallel threads.
+
+Bonus Content! How do these findings hold up on an Intel CPU? What about older runtimes?
+
+Running Copy Performance Tests [.NET 5.0.2 on BEAST]...
+
+ | Method                               | Speed [1T] | Speed [2T] | Speed [4T] |
+ | ------------------------------------ | ---------: | ---------: | ---------: |
+ | ArrayCopy                            |  9.45 GB/s |  11.5 GB/s |  12.0 GB/s |
+ | BufferBlockCopy                      |  9.51 GB/s |  11.6 GB/s |  12.0 GB/s |
+ | AsSpanCopy                           |  9.47 GB/s |  11.6 GB/s |  12.0 GB/s |
+ | UnsafeCopyBlock                      |  9.68 GB/s |  11.8 GB/s |  12.0 GB/s |
+ | UnsafeCopyBlockUnaligned             |  9.71 GB/s |  11.8 GB/s |  12.0 GB/s |
+ | BufferMemoryCopy                     |  9.67 GB/s |  11.9 GB/s |  12.1 GB/s |
+ | Memcpy                               |  14.1 GB/s |  14.6 GB/s |  13.3 GB/s |
+
+ | UnsafeForLong                        |  7.45 GB/s |  10.3 GB/s |  9.76 GB/s |
+ | UnsafeWhileLong                      |  9.02 GB/s |  10.4 GB/s |  9.84 GB/s |
+ | Avx128_LoadStore                     |  9.91 GB/s |  10.7 GB/s |  9.98 GB/s |
+ | Avx256_LoadStore                     |  10.2 GB/s |  10.6 GB/s |  10.0 GB/s |
+ | StoreNonTemporalInt                  |  8.65 GB/s |  14.1 GB/s |  14.4 GB/s |
+ | StoreNonTemporalLong                 |  13.0 GB/s |  15.0 GB/s |  14.2 GB/s |
+ | StoreNonTemporalLong_Unrolled2       |  13.6 GB/s |  14.8 GB/s |  13.9 GB/s |
+ | StoreNonTemporalLong_Unrolled4       |  13.7 GB/s |  15.1 GB/s |  14.1 GB/s |
+ | Avx128_StoreNonTemporal              |  6.91 GB/s |  13.6 GB/s |  14.5 GB/s |
+ | Avx128_StoreNonTemporal_Unrolled2    |  10.8 GB/s |  15.2 GB/s |  14.4 GB/s |
+ | Avx128_StoreNonTemporal_Unrolled2v2  |  10.7 GB/s |  15.2 GB/s |  14.4 GB/s |
+ | Avx128_StoreNonTemporal_Unrolled4v2  |  12.6 GB/s |  15.2 GB/s |  14.4 GB/s |
+ | Avx256_StoreNonTemporal              |  12.4 GB/s |  15.3 GB/s |  14.3 GB/s |
+ | Avx256_StoreNonTemporal_Unrolled2v2  |  14.5 GB/s |  15.3 GB/s |  14.3 GB/s |
+ | Avx256_StoreNonTemporal_Unrolled4v2  |  14.7 GB/s |  15.3 GB/s |  14.3 GB/s |
+ | Avx256_StoreNonTemporal_Unrolled8v2  |  14.4 GB/s |  15.0 GB/s |  14.0 GB/s |
+ | Avx256_StoreNonTemporal_Unrolled16v2 |  14.4 GB/s |  15.0 GB/s |  14.0 GB/s |
 
 Running Copy Performance Tests [.NET 5.0.2 on ZEPHYRUS]...
 
