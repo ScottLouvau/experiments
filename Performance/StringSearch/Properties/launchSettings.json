@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "StringSearch": {
+      "commandName": "Project",
+      "commandLineArgs": "Convert \"C:\\Code\" \"*.*\""
+    }
+  }
+}
