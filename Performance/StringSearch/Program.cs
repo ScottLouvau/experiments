@@ -59,8 +59,9 @@ namespace StringSearch
     ///  Learnings:
     ///   - Cold times are much longer (OS Defender file scanning most likely).
     ///   - 'Normal' search = File.ReadAllText and string.IndexOf(Ordinal)
-    ///      - Runtime is 75% string.IndexOf, 25% File.ReadAllText
-    ///   - 'Fast' search = File.ReadAllBytes and Span.IndexOf.
+    ///      - Runtime is all File.ReadAllText (1.4% string.IndexOf(ordinal))
+    ///      - With default string.IndexOf, runtime is 75% string.IndexOf(default), 25% File.ReadAllText
+    ///    - 'Fast' search = File.ReadAllBytes and Span.IndexOf.
     ///      - Runtime is 62% File.ReadAllBytes, 26% Directory.GetFiles, 11% Span.IndexOf.
     ///      
     ///   - 'Normal' is 40x slower than 'Fast' overall
@@ -86,12 +87,16 @@ namespace StringSearch
     ///        - DB: 'SQLite format 3' 0x00
     ///   
     ///   
-    ///   - C:\Code, *.*: 9,585 files, 848 MB, 10 iterations.
-    ///     - Default Search:             160.846 sec
-    ///     - Enumerate only:               1.137 sec
-    ///     - Enum and ReadAllBytes only:   3.789 sec
-    ///     - Enum and ReadAllText only:   51.323 sec
-    ///     - Enum, Read, Span.IndexOf:     4.250 sec
+    ///   - C:\Code, *.*: 9,585 files, 848 MB, 5 iterations.
+    ///     - Default Search:              17.913 sec
+    ///     - Enumerate only:               0.586 sec
+    ///     - Enum and ReadAllBytes only:   1.788 sec
+    ///     - Enum and ReadAllText only:   16.948 sec
+    ///     - Enum, Read, Span.IndexOf:     1.952 sec
+    ///     
+    ///   - 1,888 UTF-8 with BOM
+    ///   - 3,522 UTF-8 (byte check)
+    ///   - 4,135 Filtered Out (1,024b); 4,123 Filtered (256 b); 4,106 (64 b)
     ///     
     /// 
     ///   
@@ -116,7 +121,7 @@ namespace StringSearch
 
             List<Match> matches = null;
 
-            for (int i = 0; i < 10; ++i)
+            for (int i = 0; i < 1; ++i)
             {
                 //matches = SearchDefault(valueToFind, directoryToSearch, fileExtensions);
                 //matches = SearchUtf8Bytes(valueToFind, directoryToSearch, fileExtensions);
@@ -125,19 +130,19 @@ namespace StringSearch
                 //matches = LoadFilesOnlyV2(valueToFind, directoryToSearch, fileExtensions
                 //matches = LoadFileTextOnly(valueToFind, directoryToSearch, fileExtensions);
                 //matches = SearchUtf8BytesV2(valueToFind, directoryToSearch, fileExtensions);
-                //matches = SearchUtf8BytesV3(valueToFind, directoryToSearch, fileExtensions);
+                matches = SearchUtf8BytesV3(valueToFind, directoryToSearch, fileExtensions);
                 //matches = SniffFilesOnly(valueToFind, directoryToSearch, fileExtensions);
                 //matches = LoadFilePrefixes(directoryToSearch, fileExtensions, 32 * 1024);
-                matches = LoadFilePrefixesFilterExtension(directoryToSearch, fileExtensions, 32 * 1024);
+                //matches = LoadFilePrefixesFilterExtension(directoryToSearch, fileExtensions, 32 * 1024);
             }
-            Console.WriteLine($"{FilteredCount:n0} Filtered");
+            Console.WriteLine($"{EncodingScanner.UTF8viaBOM:n0} UTF-8 (BOM)\r\n{EncodingScanner.PossibleUTF8:n0} UTF-8 (possible)\r\n{EncodingScanner.OtherViaBOM:n0} Other (BOM)\r\n{EncodingScanner.FilteredFileCount:n0} Filtered out");
             //matches = LoadFilesAndEncoding(valueToFind, directoryToSearch, fileExtensions);
 
             Console.WriteLine($"Found {matches.Count:n0} matches in {w.Elapsed.TotalSeconds:n3} sec.");
 
             foreach (Match m in matches.Take(20))
             {
-                Console.WriteLine($"{m.FilePath} @ {m.ByteIndex:n0} {m.Encoding.EncodingName}");
+                Console.WriteLine($"{m.FilePath} @ {m.ByteIndex:n0} {m.Encoding?.EncodingName}");
             }
         }
 
@@ -155,7 +160,7 @@ namespace StringSearch
 
                 while (true)
                 {
-                    int matchIndex = text.IndexOf(valueToFind, startIndex);
+                    int matchIndex = text.IndexOf(valueToFind, startIndex, StringComparison.Ordinal);
                     if (matchIndex == -1) { break; }
 
                     if (fileMatches == null) { fileMatches = new List<Match>(); }
@@ -300,7 +305,7 @@ namespace StringSearch
             {
                 string extension = Path.GetExtension(path).ToLowerInvariant();
 
-                if (!(extension == ""))// || extension == ".dll" || extension == ".exe")) // || extension == ".pack" || extension == ".zip" || extension == ".jpg" || extension == ".png" ))
+                if (!(extension == "" || extension == ".dll" || extension == ".exe")) // || extension == ".pack" || extension == ".zip" || extension == ".jpg" || extension == ".png" ))
                 {
                     using (var stream = File.OpenRead(path))
                     {
@@ -315,32 +320,6 @@ namespace StringSearch
                 else
                 {
                     Interlocked.Increment(ref FilteredCount);
-                }
-            });
-
-            return matches;
-        }
-
-        static List<Match> LoadFilesAndEncoding(string valueToFind, string directoryToSearch, string fileExtensions)
-        {
-            List<Match> matches = new List<Match>();
-            ArrayPool<byte> pool = ArrayPool<byte>.Shared;
-
-            string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, fileExtensions, SearchOption.AllDirectories);
-            Parallel.ForEach(filePathsToSearch, (path) =>
-            {
-                using (var streamReader = File.OpenText(path))
-                {
-                    string text = streamReader.ReadToEnd();
-                    Encoding encoding = streamReader.CurrentEncoding;
-
-                    if (encoding != Encoding.UTF8)
-                    {
-                        lock (matches)
-                        {
-                            matches.Add(new Match() { FilePath = path, FileLength = streamReader.BaseStream.Length, Encoding = encoding });
-                        }
-                    }
                 }
             });
 
@@ -414,7 +393,7 @@ namespace StringSearch
                 }
 
                 // Check for encoding in first 1024 bytes
-                FileEncoding encoding = EncodingScanner.Identify(contents.Slice(0, Math.Min(contents.Length, 1024)), true);
+                FileEncoding encoding = EncodingScanner.Identify(contents.Slice(0, Math.Min(contents.Length, 32768)), true);
                 if (encoding == FileEncoding.UTF8 || encoding == FileEncoding.PossibleUTF8)
                 {
                     List<Match> fileMatches = null;

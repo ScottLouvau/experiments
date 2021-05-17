@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 
 namespace StringSearch
 {
@@ -35,6 +36,11 @@ namespace StringSearch
 
     public class EncodingScanner
     {
+        public static int UTF8viaBOM;
+        public static int OtherViaBOM;
+        public static int PossibleUTF8;
+        public static int FilteredFileCount;
+
         private const byte TooShort = 1 << 0;
         private const byte TooLong = 1 << 1;
         private const byte Overlong3 = 1 << 2;
@@ -138,14 +144,18 @@ namespace StringSearch
 
                 if (bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
                 {
+                    Interlocked.Increment(ref UTF8viaBOM);
                     return FileEncoding.UTF8;
                 }
                 else if (bytes[0] == 0xFE && bytes[1] == 0xFF)
                 {
+                    Interlocked.Increment(ref OtherViaBOM);
                     return FileEncoding.UTF16_BigEndian;
                 }
                 else if (bytes[0] == 0xFF && bytes[1] == 0xFE)
                 {
+                    Interlocked.Increment(ref OtherViaBOM);
+
                     if (bytes[2] != 0 || bytes[3] != 0)
                     {
                         return FileEncoding.UTF16_LittleEndian;
@@ -157,16 +167,31 @@ namespace StringSearch
                 }
                 else if (bytes[0] == 0 && bytes[1] == 0 && bytes[2] == 0xFE && bytes[3] == 0xFF)
                 {
+                    Interlocked.Increment(ref OtherViaBOM);
+
                     return FileEncoding.UTF32_BigEndian;
                 }
                 else if (bytes.Length >= 14 && bytes[0] == 0x5A && bytes[1] == 0x4D && bytes[12] == 0xFF && bytes[13] == 0xFF)
                 {
+                    Interlocked.Increment(ref FilteredFileCount);
+
                     // PE 'MZ' header, then Dos Stub, or at least illegal UTF-8.
                     return FileEncoding.Binary;
                 }
             }
 
-            return (ApparentlyValidUTF8(bytes) ? FileEncoding.PossibleUTF8 : FileEncoding.NotLegalUTF8);
+            bool possibleUTF8 = ApparentlyValidUTF8(bytes);
+
+            if(possibleUTF8)
+            {
+                Interlocked.Increment(ref PossibleUTF8);
+                return FileEncoding.PossibleUTF8;
+            }
+            else
+            {
+                Interlocked.Increment(ref FilteredFileCount);
+                return FileEncoding.NotLegalUTF8;
+            }
         }
 
         private static bool ApparentlyValidUTF8(Span<byte> bytes)
