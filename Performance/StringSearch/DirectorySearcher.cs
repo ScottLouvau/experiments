@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace StringSearch
@@ -11,7 +8,9 @@ namespace StringSearch
     public enum FileSearcherMode
     {
         Utf8,
-        DotNetDefault
+        Utf8Whole,
+        DotNet,
+        DotNetUnpositioned,
     }
 
     // TODO:
@@ -43,12 +42,20 @@ namespace StringSearch
 
             switch (this.Mode)
             {
-                case FileSearcherMode.DotNetDefault:
+                case FileSearcherMode.DotNet:
                     fileSearcher = new DotNetFileSearcher(valueToFind);
+                    break;
+
+                case FileSearcherMode.DotNetUnpositioned:
+                    fileSearcher = new DotNetUnpositionedFileSearcher(valueToFind);
                     break;
 
                 case FileSearcherMode.Utf8:
                     fileSearcher = new Utf8FileSearcher(valueToFind);
+                    break;
+
+                case FileSearcherMode.Utf8Whole:
+                    fileSearcher = new Utf8WholeSearcher(valueToFind);
                     break;
 
                 default:

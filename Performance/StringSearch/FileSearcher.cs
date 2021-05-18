@@ -102,11 +102,11 @@ namespace StringSearch
         }
     }
 
-    public class DotNetFileSearcher : IFileSearcher
+    public class DotNetUnpositionedFileSearcher : IFileSearcher
     {
         public string ValueToFind { get; }
 
-        public DotNetFileSearcher(string valueToFind)
+        public DotNetUnpositionedFileSearcher(string valueToFind)
         {
             ValueToFind = valueToFind;
         }
@@ -140,6 +140,52 @@ namespace StringSearch
                 matches.Add(new FilePosition() { FilePath = filePath, CharOffset = startIndex + matchIndex });
 
                 startIndex = matchIndex + 1;
+            }
+
+            return matches;
+        }
+    }
+
+    public class DotNetFileSearcher : IFileSearcher
+    {
+        public string ValueToFind { get; }
+
+        public DotNetFileSearcher(string valueToFind)
+        {
+            ValueToFind = valueToFind;
+        }
+
+        public List<FilePosition> Search(string filePath)
+        {
+            using (Stream stream = File.OpenRead(filePath))
+            {
+                return Search(stream, filePath);
+            }
+        }
+
+        public List<FilePosition> Search(Stream streamToSearch, string filePath)
+        {
+            List<FilePosition> matches = null;
+
+            ReadOnlySpan<char> contents = null;
+            using (StreamReader reader = new StreamReader(streamToSearch))
+            {
+                contents = reader.ReadToEnd();
+            }
+
+            FilePosition current = new FilePosition() { FilePath = filePath, ByteOffset = 0, CharOffset = 0, LineNumber = 1, CharInLine = 1 };
+
+            while (true)
+            {
+                int matchIndex = contents.IndexOf(this.ValueToFind, StringComparison.Ordinal);
+                if (matchIndex == -1) { break; }
+
+                current = FilePosition.Update(current, contents.Slice(0, matchIndex));
+                matches ??= new List<FilePosition>();
+                matches.Add(current);
+
+                current.CharInLine++;
+                contents = contents.Slice(matchIndex + 1);
             }
 
             return matches;
