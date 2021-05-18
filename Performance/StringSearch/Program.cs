@@ -108,7 +108,7 @@ namespace StringSearch
 
             List<Match> matches = null;
 
-            FileSearcher searcher = new FileSearcher(valueToFind, directoryToSearch, searchPattern)
+            DirectorySearcher searcher = new DirectorySearcher(valueToFind, directoryToSearch, searchPattern)
             {
                 Mode = FileSearcherMode.Utf8,
                 Multithreaded = true,
