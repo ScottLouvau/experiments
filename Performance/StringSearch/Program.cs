@@ -41,10 +41,7 @@ namespace StringSearch
     public class Match
     {
         public string FilePath { get; set; }
-        public int ByteIndex { get; set; }
-
-        public long FileLength { get; set; }
-        public Encoding Encoding { get; set; }
+        public int MatchByteIndex { get; set; }
     }
 
 
@@ -96,7 +93,8 @@ namespace StringSearch
     ///     
     ///   - 1,888 UTF-8 with BOM
     ///   - 3,522 UTF-8 (byte check)
-    ///   - 4,135 Filtered Out (1,024b); 4,123 Filtered (256 b); 4,106 (64 b)
+    ///   - Filtered Out: 4,142 (32 KB); 4,135 (1 KB); 4,123 (256 b); 4,106 (64 b)
+    ///     - Filtered (2b check): 4,141 (32 KB); 4,133 (1 KB)
     ///     
     /// 
     ///   
@@ -113,61 +111,55 @@ namespace StringSearch
         static void Main(string[] args)
         {
             string valueToFind = args[0];
-            string directoryToSearch = args[1];
-            string fileExtensions = (args.Length > 2 ? args[2] : "*.*");
+            byte[] bytesToFind = Encoding.UTF8.GetBytes(valueToFind);
+            string directoryToSearch = Path.GetFullPath((args.Length > 1 ? args[1] : Environment.CurrentDirectory));
+            string searchPattern = (args.Length > 2 ? args[2] : "*.*");
 
             Console.WriteLine($"Searching for \"{valueToFind}\" in '{directoryToSearch}'...");
             Stopwatch w = Stopwatch.StartNew();
 
             List<Match> matches = null;
 
-            for (int i = 0; i < 1; ++i)
+            for (int i = 0; i < 5; ++i)
             {
-                //matches = SearchDefault(valueToFind, directoryToSearch, fileExtensions);
-                //matches = SearchUtf8Bytes(valueToFind, directoryToSearch, fileExtensions);
-                //matches = EnumFilesOnly(valueToFind, directoryToSearch, fileExtensions);
-                //matches = LoadFilesOnly(valueToFind, directoryToSearch, fileExtensions);
-                //matches = LoadFilesOnlyV2(valueToFind, directoryToSearch, fileExtensions
-                //matches = LoadFileTextOnly(valueToFind, directoryToSearch, fileExtensions);
-                //matches = SearchUtf8BytesV2(valueToFind, directoryToSearch, fileExtensions);
-                matches = SearchUtf8BytesV3(valueToFind, directoryToSearch, fileExtensions);
-                //matches = SniffFilesOnly(valueToFind, directoryToSearch, fileExtensions);
-                //matches = LoadFilePrefixes(directoryToSearch, fileExtensions, 32 * 1024);
-                //matches = LoadFilePrefixesFilterExtension(directoryToSearch, fileExtensions, 32 * 1024);
+                //matches = SearchParallel(directoryToSearch, searchPattern, (path) => FindDefault(valueToFind, path));
+                //matches = SearchParallel(directoryToSearch, searchPattern, (path) => FindUtf8(bytesToFind, path));
+
+                matches = SearchParallel(directoryToSearch, searchPattern, (path) => WithExtensionFilter(path, (path) => FindUtf8(bytesToFind, path)));
+                //matches = SearchParallel(directoryToSearch, searchPattern, (path) => WithExtensionFilter(path, (path) => WithFileIdentification(path, valueToFind, bytesToFind, 64 * 1024, 1024)));
+
+                // Enumerate only
+                //matches = SearchParallel(directoryToSearch, searchPattern, (path) => null);
+
+                // Enumerate and File.ReadAllText only
+                //matches = SearchParallel(directoryToSearch, searchPattern, (path) => { File.ReadAllText(path); return null; });
+
+                // Enumerate and File.ReadAllBytes only
+                //matches = SearchParallel(directoryToSearch, searchPattern, (path) => { File.ReadAllBytes(path); return null; });
+
+                //matches = SearchUtf8BytesV2(valueToFind, directoryToSearch, searchPattern);
+                //matches = SearchUtf8BytesV3(valueToFind, directoryToSearch, searchPattern);
+                //matches = SniffFilesOnly(valueToFind, directoryToSearch, searchPattern);
+                //matches = LoadFilePrefixes(directoryToSearch, searchPattern, 32 * 1024);
+                //matches = LoadFilePrefixesFilterExtension(directoryToSearch, searchPattern, 32 * 1024);
             }
-            Console.WriteLine($"{EncodingScanner.UTF8viaBOM:n0} UTF-8 (BOM)\r\n{EncodingScanner.PossibleUTF8:n0} UTF-8 (possible)\r\n{EncodingScanner.OtherViaBOM:n0} Other (BOM)\r\n{EncodingScanner.FilteredFileCount:n0} Filtered out");
-            //matches = LoadFilesAndEncoding(valueToFind, directoryToSearch, fileExtensions);
 
             Console.WriteLine($"Found {matches.Count:n0} matches in {w.Elapsed.TotalSeconds:n3} sec.");
 
             foreach (Match m in matches.Take(20))
             {
-                Console.WriteLine($"{m.FilePath} @ {m.ByteIndex:n0} {m.Encoding?.EncodingName}");
+                Console.WriteLine($"{m.FilePath} @ {m.MatchByteIndex:n0}");
             }
         }
 
-        static List<Match> SearchDefault(string valueToFind, string directoryToSearch, string fileExtensions)
+        static List<Match> SearchParallel(string directoryToSearch, string searchPattern, Func<string, List<Match>> searchInFile)
         {
             List<Match> matches = new List<Match>();
+            string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, searchPattern, SearchOption.AllDirectories);
 
-            string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, fileExtensions, SearchOption.AllDirectories);
             Parallel.ForEach(filePathsToSearch, (path) =>
             {
-                List<Match> fileMatches = null;
-
-                string text = File.ReadAllText(path);
-                int startIndex = 0;
-
-                while (true)
-                {
-                    int matchIndex = text.IndexOf(valueToFind, startIndex, StringComparison.Ordinal);
-                    if (matchIndex == -1) { break; }
-
-                    if (fileMatches == null) { fileMatches = new List<Match>(); }
-                    fileMatches.Add(new Match() { FilePath = path, ByteIndex = matchIndex });
-
-                    startIndex = matchIndex + 1;
-                }
+                List<Match> fileMatches = searchInFile(path);
 
                 if (fileMatches != null)
                 {
@@ -181,12 +173,96 @@ namespace StringSearch
             return matches;
         }
 
-        static List<Match> SearchUtf8Bytes(string valueToFind, string directoryToSearch, string fileExtensions)
+        static List<Match> FindDefault(string valueToFind, string filePath)
+        {
+            List<Match> matches = null;
+            string text = File.ReadAllText(filePath);
+
+            int startIndex = 0;
+
+            while (true)
+            {
+                int matchIndex = text.IndexOf(valueToFind, startIndex, StringComparison.Ordinal);
+                if (matchIndex == -1) { break; }
+
+                matches ??= new List<Match>();
+                matches.Add(new Match() { FilePath = filePath, MatchByteIndex = matchIndex });
+
+                startIndex = matchIndex + 1;
+            }
+
+            return matches;
+        }
+
+        static List<Match> FindUtf8(Span<byte> valueToFind, string filePath)
+        {
+            return FindUtf8(valueToFind, filePath, File.ReadAllBytes(filePath));
+        }
+
+        static List<Match> FindUtf8(Span<byte> valueToFind, string filePath, Span<byte> contents)
+        {
+            List<Match> matches = null;
+
+            int startIndex = 0;
+
+            while (true)
+            {
+                int matchIndex = contents.IndexOf(valueToFind);
+                if (matchIndex == -1) { break; }
+
+                if (matches == null) { matches = new List<Match>(); }
+                matches.Add(new Match() { FilePath = filePath, MatchByteIndex = startIndex + matchIndex });
+
+                startIndex = matchIndex + 1;
+                contents = contents.Slice(matchIndex + 1);
+            }
+
+            return matches;
+        }
+
+        static List<Match> WithFileIdentification(string filePath, string valueToFind, Span<byte> bytesToFind, int prefixToLoad, int prefixToScan)
+        {
+            using (var stream = File.OpenRead(filePath))
+            {
+                int prefixLength = Math.Min((int)stream.Length, prefixToLoad);
+                byte[] buffer = ArrayPool<byte>.Shared.Rent((int)stream.Length);
+
+                Span<byte> contents = buffer;
+                int prefixReadLength = stream.Read(contents.Slice(0, prefixLength));
+                contents = contents.Slice(0, prefixReadLength);
+
+                FileDetectionResult result = FileTypeScanner.Identify(contents.Slice(Math.Min(contents.Length, prefixToScan)));
+                if (result.Type == FileTypeDetected.UTF8)
+                {
+                    contents = buffer;
+
+                    int remainingLength = 0;
+                    if (stream.Length > prefixReadLength)
+                    {
+                        remainingLength = stream.Read(contents.Slice(prefixReadLength));
+                    }
+
+                    contents = contents.Slice(result.BomByteCount, (prefixReadLength + remainingLength - result.BomByteCount));
+
+                    return FindUtf8(bytesToFind, filePath, contents);
+                }
+                else if (result.Type == FileTypeDetected.UnicodeOther)
+                {
+                    return FindDefault(valueToFind, filePath);
+                }
+                else
+                {
+                    return null;
+                }
+            }
+        }
+
+        static List<Match> SearchUtf8Bytes(string valueToFind, string directoryToSearch, string searchPattern)
         {
             List<Match> matches = new List<Match>();
 
             byte[] bytesToFind = Encoding.UTF8.GetBytes(valueToFind);
-            string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, fileExtensions, SearchOption.AllDirectories);
+            string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, searchPattern, SearchOption.AllDirectories);
             Parallel.ForEach(filePathsToSearch, (path) =>
             {
                 List<Match> fileMatches = null;
@@ -200,7 +276,7 @@ namespace StringSearch
                     if (matchIndex == -1) { break; }
 
                     if (fileMatches == null) { fileMatches = new List<Match>(); }
-                    fileMatches.Add(new Match() { FilePath = path, ByteIndex = startIndex + matchIndex });
+                    fileMatches.Add(new Match() { FilePath = path, MatchByteIndex = startIndex + matchIndex });
 
                     startIndex = matchIndex + 1;
                     contents = contents.Slice(matchIndex + 1);
@@ -218,65 +294,12 @@ namespace StringSearch
             return matches;
         }
 
-        static List<Match> EnumFilesOnly(string valueToFind, string directoryToSearch, string fileExtensions)
-        {
-            string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, fileExtensions, SearchOption.AllDirectories);
-            return new List<Match>();
-        }
-
-        static List<Match> LoadFilesOnly(string valueToFind, string directoryToSearch, string fileExtensions)
-        {
-            List<Match> matches = new List<Match>();
-
-            string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, fileExtensions, SearchOption.AllDirectories);
-            Parallel.ForEach(filePathsToSearch, (path) =>
-            {
-                Span<byte> contents = File.ReadAllBytes(path);
-            });
-
-            return matches;
-        }
-
-        static List<Match> LoadFileTextOnly(string valueToFind, string directoryToSearch, string fileExtensions)
-        {
-            List<Match> matches = new List<Match>();
-
-            string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, fileExtensions, SearchOption.AllDirectories);
-            Parallel.ForEach(filePathsToSearch, (path) =>
-            {
-                string text = File.ReadAllText(path);
-            });
-
-            return matches;
-        }
-
-        static List<Match> LoadFilesOnlyV2(string valueToFind, string directoryToSearch, string fileExtensions)
+        static List<Match> LoadFilePrefixes(string directoryToSearch, string searchPattern, int prefixBytes)
         {
             List<Match> matches = new List<Match>();
             ArrayPool<byte> pool = ArrayPool<byte>.Shared;
 
-            string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, fileExtensions, SearchOption.AllDirectories);
-            Parallel.ForEach(filePathsToSearch, (path) =>
-            {
-                using (var stream = File.OpenRead(path))
-                {
-                    byte[] buffer = pool.Rent((int)stream.Length);
-
-                    Span<byte> contents = buffer;
-                    int usedLength = stream.Read(contents);
-                    contents = contents.Slice(0, usedLength);
-                }
-            });
-
-            return matches;
-        }
-
-        static List<Match> LoadFilePrefixes(string directoryToSearch, string fileExtensions, int prefixBytes)
-        {
-            List<Match> matches = new List<Match>();
-            ArrayPool<byte> pool = ArrayPool<byte>.Shared;
-
-            string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, fileExtensions, SearchOption.AllDirectories);
+            string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, searchPattern, SearchOption.AllDirectories);
             Parallel.ForEach(filePathsToSearch, (path) =>
             {
                 using (var stream = File.OpenRead(path))
@@ -293,46 +316,27 @@ namespace StringSearch
             return matches;
         }
 
-        static int FilteredCount = 0;
-
-        static List<Match> LoadFilePrefixesFilterExtension(string directoryToSearch, string fileExtensions, int prefixBytes)
+        static int ExtensionFilteredCount;
+        static List<Match> WithExtensionFilter(string filePath, Func<string, List<Match>> next)
         {
-            List<Match> matches = new List<Match>();
-            ArrayPool<byte> pool = ArrayPool<byte>.Shared;
+            string extension = Path.GetExtension(filePath).ToLowerInvariant();
 
-            string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, fileExtensions, SearchOption.AllDirectories);
-            Parallel.ForEach(filePathsToSearch, (path) =>
+            if (extension == "" || extension == ".dll" || extension == ".exe" || extension == ".zip")
             {
-                string extension = Path.GetExtension(path).ToLowerInvariant();
+                Interlocked.Increment(ref ExtensionFilteredCount);
+                return null;
+            }
 
-                if (!(extension == "" || extension == ".dll" || extension == ".exe")) // || extension == ".pack" || extension == ".zip" || extension == ".jpg" || extension == ".png" ))
-                {
-                    using (var stream = File.OpenRead(path))
-                    {
-                        int prefixLength = Math.Min((int)stream.Length, prefixBytes);
-                        byte[] buffer = pool.Rent((int)stream.Length);
-
-                        Span<byte> contents = buffer;
-                        int usedLength = stream.Read(contents.Slice(0, prefixLength));
-                        contents = contents.Slice(0, usedLength);
-                    }
-                }
-                else
-                {
-                    Interlocked.Increment(ref FilteredCount);
-                }
-            });
-
-            return matches;
+            return next(filePath);
         }
 
-        static List<Match> SearchUtf8BytesV2(string valueToFind, string directoryToSearch, string fileExtensions)
+        static List<Match> SearchUtf8BytesV2(string valueToFind, string directoryToSearch, string searchPattern)
         {
             List<Match> matches = new List<Match>();
             ArrayPool<byte> pool = ArrayPool<byte>.Shared;
 
             byte[] bytesToFind = Encoding.UTF8.GetBytes(valueToFind);
-            string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, fileExtensions, SearchOption.AllDirectories);
+            string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, searchPattern, SearchOption.AllDirectories);
             Parallel.ForEach(filePathsToSearch, (path) =>
             {
                 Span<byte> contents = null;
@@ -354,7 +358,7 @@ namespace StringSearch
                     if (matchIndex == -1) { break; }
 
                     if (fileMatches == null) { fileMatches = new List<Match>(); }
-                    fileMatches.Add(new Match() { FilePath = path, ByteIndex = startIndex + matchIndex });
+                    fileMatches.Add(new Match() { FilePath = path, MatchByteIndex = startIndex + matchIndex });
 
                     startIndex = matchIndex + 1;
                     contents = contents.Slice(matchIndex + 1);
@@ -372,89 +376,55 @@ namespace StringSearch
             return matches;
         }
 
-        static List<Match> SearchUtf8BytesV3(string valueToFind, string directoryToSearch, string fileExtensions)
-        {
-            List<Match> matches = new List<Match>();
-            ArrayPool<byte> pool = ArrayPool<byte>.Shared;
+        //static List<Match> SearchUtf8BytesV3(string valueToFind, string directoryToSearch, string searchPattern)
+        //{
+        //    List<Match> matches = new List<Match>();
+        //    ArrayPool<byte> pool = ArrayPool<byte>.Shared;
 
-            byte[] bytesToFind = Encoding.UTF8.GetBytes(valueToFind);
-            string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, fileExtensions, SearchOption.AllDirectories);
-            Parallel.ForEach(filePathsToSearch, (path) =>
-            {
-                Span<byte> contents = null;
+        //    byte[] bytesToFind = Encoding.UTF8.GetBytes(valueToFind);
+        //    string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, searchPattern, SearchOption.AllDirectories);
+        //    Parallel.ForEach(filePathsToSearch, (path) =>
+        //    {
+        //        Span<byte> contents = null;
 
-                using (var stream = File.OpenRead(path))
-                {
-                    byte[] buffer = pool.Rent((int)stream.Length);
+        //        using (var stream = File.OpenRead(path))
+        //        {
+        //            byte[] buffer = pool.Rent((int)stream.Length);
 
-                    contents = buffer;
-                    int usedLength = stream.Read(contents);
-                    contents = contents.Slice(0, usedLength);
-                }
+        //            contents = buffer;
+        //            int usedLength = stream.Read(contents);
+        //            contents = contents.Slice(0, usedLength);
+        //        }
 
-                // Check for encoding in first 1024 bytes
-                FileEncoding encoding = EncodingScanner.Identify(contents.Slice(0, Math.Min(contents.Length, 32768)), true);
-                if (encoding == FileEncoding.UTF8 || encoding == FileEncoding.PossibleUTF8)
-                {
-                    List<Match> fileMatches = null;
-                    int startIndex = 0;
-                    while (true)
-                    {
-                        int matchIndex = contents.IndexOf(bytesToFind);
-                        if (matchIndex == -1) { break; }
+        //        // Check for encoding in first 1024 bytes
+        //        FileDetectionResult result = FileTypeScanner.Identify(contents.Slice(0, Math.Min(contents.Length, 1024)));
+        //        if (typeDetected == FileTypeDetected.UTF8 || typeDetected == FileTypeDetected.PossibleUTF8)
+        //        {
+        //            List<Match> fileMatches = null;
+        //            int startIndex = 0;
+        //            while (true)
+        //            {
+        //                int matchIndex = contents.IndexOf(bytesToFind);
+        //                if (matchIndex == -1) { break; }
 
-                        if (fileMatches == null) { fileMatches = new List<Match>(); }
-                        fileMatches.Add(new Match() { FilePath = path, ByteIndex = startIndex + matchIndex });
+        //                if (fileMatches == null) { fileMatches = new List<Match>(); }
+        //                fileMatches.Add(new Match() { FilePath = path, MatchByteIndex = startIndex + matchIndex });
 
-                        startIndex = matchIndex + 1;
-                        contents = contents.Slice(matchIndex + 1);
-                    }
+        //                startIndex = matchIndex + 1;
+        //                contents = contents.Slice(matchIndex + 1);
+        //            }
 
-                    if (fileMatches != null)
-                    {
-                        lock (matches)
-                        {
-                            matches.AddRange(fileMatches);
-                        }
-                    }
-                }
-            });
+        //            if (fileMatches != null)
+        //            {
+        //                lock (matches)
+        //                {
+        //                    matches.AddRange(fileMatches);
+        //                }
+        //            }
+        //        }
+        //    });
 
-            return matches;
-        }
-
-        static List<Match> SniffFilesOnly(string valueToFind, string directoryToSearch, string fileExtensions)
-        {
-            List<Match> matches = new List<Match>();
-            ArrayPool<byte> pool = ArrayPool<byte>.Shared;
-
-            byte[] bytesToFind = Encoding.UTF8.GetBytes(valueToFind);
-            string[] filePathsToSearch = Directory.GetFiles(directoryToSearch, fileExtensions, SearchOption.AllDirectories);
-            Parallel.ForEach(filePathsToSearch, (path) =>
-            {
-                Span<byte> contents = null;
-                FileEncoding encoding = FileEncoding.PossibleUTF8;
-
-                using (var stream = File.OpenRead(path))
-                {
-                    byte[] buffer = pool.Rent((int)stream.Length);
-
-                    int prefixLength = Math.Min(buffer.Length, 1024);
-
-                    contents = buffer;
-                    stream.Read(contents.Slice(0, prefixLength));
-
-                    encoding = EncodingScanner.Identify(contents.Slice(0, prefixLength), true);
-
-                    if (encoding == FileEncoding.UTF8 || encoding == FileEncoding.PossibleUTF8)
-                    {
-                        int remainingLength = stream.Read(contents.Slice(prefixLength));
-                        contents = contents.Slice(0, prefixLength + remainingLength);
-                    }
-                }
-            });
-
-            return matches;
-        }
+        //    return matches;
+        //}
     }
 }
