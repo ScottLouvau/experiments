@@ -8,12 +8,6 @@ using System.Threading.Tasks;
 
 namespace StringSearch
 {
-    public class Match
-    {
-        public string FilePath { get; set; }
-        public long MatchByteIndex { get; set; }
-    }
-
     public enum FileSearcherMode
     {
         Utf8,
@@ -30,43 +24,62 @@ namespace StringSearch
 
     public class DirectorySearcher
     {
-        public FileSearcherMode Mode { get; set; } = FileSearcherMode.Utf8;
-        public bool Multithreaded { get; set; } = true;
-        public bool FilterOnFileExtension { get; set; } = true;
-        public bool FilterOnFirstBytes { get; set; } = true;
-        public bool CaseInsensitiveAscii { get; set; } = false;
+        public FileSearcherMode Mode { get; }
+        public bool Multithreaded { get; }
+        public bool FilterOnFileExtension { get; }
+        public bool FilterOnFirstBytes { get; }
 
-        public int PrefixBytesToLoad { get; } = 64 * 1024;
-        public int PrefixBytesToCheck { get; } = 1024;
-
-        public string DirectoryToSearch { get; }
-        public string SearchPattern { get; }
-        public string ValueToFind { get; }
-        private byte[] BytesToFind { get; }
-
-        private ArrayPool<byte> Pool { get; } = ArrayPool<byte>.Shared;
-
-        public long BytesSearched => _bytesSearched;
-        private long _bytesSearched;
-
-        public DirectorySearcher(string valueToFind, string directoryToSearch, string searchPattern)
+        public DirectorySearcher(FileSearcherMode mode = FileSearcherMode.Utf8, bool multithreaded = true, bool filterOnFileExtension = true, bool filterOnFirstBytes = true)
         {
-            DirectoryToSearch = directoryToSearch;
-            SearchPattern = searchPattern;
-            ValueToFind = valueToFind;
-            BytesToFind = Encoding.UTF8.GetBytes(ValueToFind);
+            Mode = mode;
+            Multithreaded = multithreaded;
+            FilterOnFileExtension = filterOnFileExtension;
+            FilterOnFirstBytes = filterOnFirstBytes;
         }
 
-        public List<Match> FindMatches()
+        private IFileSearcher BuildSearcher(string valueToFind)
         {
-            List<Match> result = new List<Match>();
-            string[] filePaths = Directory.GetFiles(DirectoryToSearch, SearchPattern, SearchOption.AllDirectories);
+            IFileSearcher fileSearcher;
+
+            switch (this.Mode)
+            {
+                case FileSearcherMode.DotNetDefault:
+                    fileSearcher = new DotNetFileSearcher(valueToFind);
+                    break;
+
+                case FileSearcherMode.Utf8:
+                    fileSearcher = new Utf8FileSearcher(valueToFind);
+                    break;
+
+                default:
+                    throw new NotImplementedException($"FileSearcherMode {Mode} not implemented.");
+            }
+
+            if (this.FilterOnFirstBytes)
+            {
+                fileSearcher = new FilePrefixFilter(fileSearcher, new DotNetFileSearcher(valueToFind));
+            }
+
+            if (this.FilterOnFileExtension)
+            {
+                fileSearcher = new FileExtensionFilter(fileSearcher);
+            }
+
+            return fileSearcher;
+        }
+
+        public List<FilePosition> FindMatches(string valueToFind, string directoryToSearch, string searchPattern)
+        {
+            IFileSearcher fileSearcher = BuildSearcher(valueToFind);
+
+            List<FilePosition> result = new List<FilePosition>();
+            string[] filePaths = Directory.GetFiles(directoryToSearch, searchPattern, SearchOption.AllDirectories);
 
             if (this.Multithreaded)
             {
                 Parallel.ForEach(filePaths, (path) =>
                 {
-                    List<Match> fileMatches = SearchFile(path);
+                    List<FilePosition> fileMatches = fileSearcher.Search(path);
 
                     if (fileMatches != null)
                     {
@@ -81,7 +94,7 @@ namespace StringSearch
             {
                 foreach (string path in filePaths)
                 {
-                    List<Match> fileMatches = SearchFile(path);
+                    List<FilePosition> fileMatches = fileSearcher.Search(path);
 
                     if (fileMatches != null)
                     {
@@ -93,124 +106,82 @@ namespace StringSearch
             return result;
         }
 
-        private List<Match> SearchFile(string filePath)
-        {
-            if (this.FilterOnFileExtension)
-            {
-                string extension = Path.GetExtension(filePath).ToLowerInvariant();
+        //private List<FilePosition> SearchFile(string filePath)
+        //{
+        //    if (this.FilterOnFileExtension)
+        //    {
+        //        string extension = Path.GetExtension(filePath).ToLowerInvariant();
 
-                if (extension == "" || extension == ".dll" || extension == ".exe" || extension == ".zip")
-                {
-                    return null;
-                }
-            }
+        //        if (extension == "" || extension == ".dll" || extension == ".exe" || extension == ".zip")
+        //        {
+        //            return null;
+        //        }
+        //    }
 
-            if (this.FilterOnFirstBytes)
-            {
-                FileScanResult result = default;
-                byte[] buffer = Pool.Rent(PrefixBytesToLoad);
+        //    if (this.FilterOnFirstBytes)
+        //    {
+        //        FileScanResult result = default;
+        //        byte[] buffer = Pool.Rent(PrefixBytesToLoad);
 
-                try
-                {
-                    Span<byte> view = null;
+        //        try
+        //        {
+        //            Span<byte> view = null;
 
-                    using (FileStream stream = File.OpenRead(filePath))
-                    {
-                        int prefixLength = Math.Min((int)stream.Length, PrefixBytesToLoad);
-                        view = buffer;
-                        view = view.Slice(0, prefixLength);
+        //            using (FileStream stream = File.OpenRead(filePath))
+        //            {
+        //                int prefixLength = Math.Min((int)stream.Length, PrefixBytesToLoad);
+        //                view = buffer;
+        //                view = view.Slice(0, prefixLength);
 
-                        int prefixLengthRead = stream.Read(view);
-                        view = view.Slice(0, prefixLengthRead);
+        //                int prefixLengthRead = stream.Read(view);
+        //                view = view.Slice(0, prefixLengthRead);
 
-                        result = FileTypeScanner.Identify(view.Slice(0, Math.Min(prefixLengthRead, PrefixBytesToCheck)));
+        //                result = FileTypeScanner.Identify(view.Slice(0, Math.Min(prefixLengthRead, PrefixBytesToCheck)));
 
-                        if (result.Type == FileTypeDetected.UTF8)
-                        {
-                            if (stream.Length > view.Length)
-                            {
-                                byte[] fullFileBuffer = Pool.Rent((int)stream.Length);
+        //                if (result.Type == FileTypeDetected.UTF8)
+        //                {
+        //                    if (stream.Length > view.Length)
+        //                    {
+        //                        byte[] fullFileBuffer = Pool.Rent((int)stream.Length);
 
-                                view.CopyTo(fullFileBuffer);
-                                Pool.Return(buffer);
-                                buffer = fullFileBuffer;
-                                view = fullFileBuffer;
+        //                        view.CopyTo(fullFileBuffer);
+        //                        Pool.Return(buffer);
+        //                        buffer = fullFileBuffer;
+        //                        view = fullFileBuffer;
 
-                                int remainderRead = stream.Read(view.Slice(prefixLengthRead));
-                                view = buffer.AsSpan().Slice(0, prefixLengthRead + remainderRead);
-                            }
+        //                        int remainderRead = stream.Read(view.Slice(prefixLengthRead));
+        //                        view = buffer.AsSpan().Slice(0, prefixLengthRead + remainderRead);
+        //                    }
 
-                            view = view.Slice(result.BomByteCount);
+        //                    view = view.Slice(result.BomByteCount);
 
-                            return SearchFileUtf8(filePath, view);
-                        }
-                    }
-                }
-                finally
-                {
-                    Pool.Return(buffer);
-                }
+        //                    return SearchFileUtf8(filePath, view);
+        //                }
+        //            }
+        //        }
+        //        finally
+        //        {
+        //            Pool.Return(buffer);
+        //        }
 
-                if (result.Type == FileTypeDetected.UnicodeOther)
-                {
-                    return SearchFileDotNet(filePath, File.ReadAllText(filePath));
-                }
-                else
-                {
-                    return null;
-                }
-            }
+        //        if (result.Type == FileTypeDetected.UnicodeOther)
+        //        {
+        //            return SearchFileDotNet(filePath, File.ReadAllText(filePath));
+        //        }
+        //        else
+        //        {
+        //            return null;
+        //        }
+        //    }
 
-            if (this.Mode == FileSearcherMode.DotNetDefault)
-            {
-                return SearchFileDotNet(filePath, File.ReadAllText(filePath));
-            }
-            else
-            {
-                return SearchFileUtf8(filePath, File.ReadAllBytes(filePath));
-            }
-        }
-
-        private List<Match> SearchFileDotNet(string filePath, string contents)
-        {
-            List<Match> matches = null;
-
-            int startIndex = 0;
-
-            while (true)
-            {
-                int matchIndex = contents.IndexOf(this.ValueToFind, startIndex, StringComparison.Ordinal);
-                if (matchIndex == -1) { break; }
-
-                matches ??= new List<Match>();
-                matches.Add(new Match() { FilePath = filePath, MatchByteIndex = matchIndex });
-
-                startIndex = matchIndex + 1;
-            }
-
-            return matches;
-        }
-
-        private List<Match> SearchFileUtf8(string filePath, Span<byte> contents)
-        {
-            Interlocked.Add(ref _bytesSearched, contents.Length);
-            List<Match> matches = null;
-
-            int startIndex = 0;
-
-            while (true)
-            {
-                int matchIndex = contents.IndexOf(BytesToFind);
-                if (matchIndex == -1) { break; }
-
-                matches ??= new List<Match>();
-                matches.Add(new Match() { FilePath = filePath, MatchByteIndex = startIndex + matchIndex });
-
-                startIndex = matchIndex + 1;
-                contents = contents.Slice(matchIndex + 1);
-            }
-
-            return matches;
-        }
+        //    if (this.Mode == FileSearcherMode.DotNetDefault)
+        //    {
+        //        return SearchFileDotNet(filePath, File.ReadAllText(filePath));
+        //    }
+        //    else
+        //    {
+        //        return SearchFileUtf8(filePath, File.ReadAllBytes(filePath));
+        //    }
+        //}
     }
 }

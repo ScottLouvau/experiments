@@ -106,27 +106,27 @@ namespace StringSearch
             Console.WriteLine($"Searching for \"{valueToFind}\" in '{directoryToSearch}'...");
             Stopwatch w = Stopwatch.StartNew();
 
-            List<Match> matches = null;
+            List<FilePosition> matches = null;
 
-            DirectorySearcher searcher = new DirectorySearcher(valueToFind, directoryToSearch, searchPattern)
-            {
-                Mode = FileSearcherMode.Utf8,
-                Multithreaded = true,
-                FilterOnFileExtension = true,
-                FilterOnFirstBytes = true
-            };
+            DirectorySearcher searcher = new DirectorySearcher(
+                mode: FileSearcherMode.Utf8,
+                multithreaded: false,
+                filterOnFileExtension: false
+            );
 
-            for (int i = 0; i < 1; ++i)
+            int iterations = 1;
+            for (int i = 0; i < iterations; ++i)
             {
-                matches = searcher.FindMatches();
+                matches = searcher.FindMatches(valueToFind, directoryToSearch, searchPattern);
             }
 
-            Console.WriteLine($"Found {matches.Count:n0} matches in {searcher.BytesSearched:n0} bytes in {w.Elapsed.TotalSeconds:n3} sec.");
+            Console.WriteLine($"Found {matches.Count:n0} matches in {w.Elapsed.TotalSeconds:n3} sec.");
 
-            foreach (Match m in matches.Take(20))
+            foreach (FilePosition m in matches.Take(20))
             {
-                Console.WriteLine($"{m.FilePath} @ {m.MatchByteIndex:n0}");
+                Console.WriteLine($"{m}");
             }
         }
+
     }
 }
