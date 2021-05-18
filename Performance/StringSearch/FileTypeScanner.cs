@@ -12,13 +12,13 @@ namespace StringSearch
         OtherNonUtf8
     }
 
-    public struct FileDetectionResult
+    public struct FileScanResult
     {
         public readonly FileTypeDetected Type { get; }
         public readonly int BomByteCount { get; }
         public bool BomFound => (BomByteCount > 0);
 
-        public FileDetectionResult(FileTypeDetected type, int bomByteCount = 0)
+        public FileScanResult(FileTypeDetected type, int bomByteCount = 0)
         {
             this.Type = type;
             this.BomByteCount = bomByteCount;
@@ -35,19 +35,19 @@ namespace StringSearch
         /// </summary>
         /// <param name="bytes">Prefix of file contents to scan</param>
         /// <returns>FileDetectionResult identifying file</returns>
-        public static FileDetectionResult Identify(Span<byte> bytes)
+        public static FileScanResult Identify(Span<byte> bytes)
         {
-            if (TryDetectByteOrderMark(bytes, out FileDetectionResult result))
+            if (TryDetectByteOrderMark(bytes, out FileScanResult result))
             {
                 return result;
             }
 
             if (IsInvalidUtf8(bytes))
             {
-                return new FileDetectionResult(FileTypeDetected.OtherNonUtf8);
+                return new FileScanResult(FileTypeDetected.OtherNonUtf8);
             }
 
-            return new FileDetectionResult(FileTypeDetected.UTF8);
+            return new FileScanResult(FileTypeDetected.UTF8);
         }
 
         /// <summary>
@@ -57,7 +57,7 @@ namespace StringSearch
         /// <param name="bytes">First Bytes from file</param>
         /// <param name="result">FileDetectionResult identifying file and prefix byte length, if found</param>
         /// <returns>True if a known prefix detected, False otherwise</returns>
-        private static bool TryDetectByteOrderMark(Span<byte> bytes, out FileDetectionResult result)
+        private static bool TryDetectByteOrderMark(Span<byte> bytes, out FileScanResult result)
         {
             result = default;
             if (bytes.Length < 4) { return false; }
@@ -67,66 +67,66 @@ namespace StringSearch
 
             if (bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
             {
-                result = new FileDetectionResult(FileTypeDetected.UTF8, 3);
+                result = new FileScanResult(FileTypeDetected.UTF8, 3);
                 return true;
             }
             else if (bytes[0] == 0xFE && bytes[1] == 0xFF)
             {
-                result = new FileDetectionResult(FileTypeDetected.UnicodeOther, 2);
+                result = new FileScanResult(FileTypeDetected.UnicodeOther, 2);
                 return true;
             }
             else if (bytes[0] == 0xFF && bytes[1] == 0xFE)
             {
                 if (bytes[2] != 0 || bytes[3] != 0)
                 {
-                    result = new FileDetectionResult(FileTypeDetected.UnicodeOther, 2);
+                    result = new FileScanResult(FileTypeDetected.UnicodeOther, 2);
                     return true;
                 }
                 else
                 {
-                    result = new FileDetectionResult(FileTypeDetected.UnicodeOther, 4);
+                    result = new FileScanResult(FileTypeDetected.UnicodeOther, 4);
                     return true;
                 }
             }
             else if (bytes[0] == 0 && bytes[1] == 0 && bytes[2] == 0xFE && bytes[3] == 0xFF)
             {
-                result = new FileDetectionResult(FileTypeDetected.UnicodeOther, 4);
+                result = new FileScanResult(FileTypeDetected.UnicodeOther, 4);
                 return true;
             }
             else if (bytes[0] == 0x5A && bytes[1] == 0x4D && bytes.Length >= 14 && bytes[12] == 0xFF && bytes[13] == 0xFF)
             {
                 // PE 'MZ' header, then Dos Stub, or at least illegal UTF-8.
-                result = new FileDetectionResult(FileTypeDetected.Executable);
+                result = new FileScanResult(FileTypeDetected.Executable);
                 return true;
             }
             else if (bytes[0] == 0x50 && bytes[1] == 0x4B && bytes[2] == 0x03 && bytes[4] == 0x04)
             {
                 // ZIP
-                result = new FileDetectionResult(FileTypeDetected.Compressed);
+                result = new FileScanResult(FileTypeDetected.Compressed);
                 return true;
             }
             else if (bytes[0] == 0x78 && (bytes[1] == 0x01 || bytes[1] == 0x9C || bytes[1] == 0x5E || bytes[1] == 0xDA))
             {
                 // ZLIB (including Git object files)
-                result = new FileDetectionResult(FileTypeDetected.Compressed);
+                result = new FileScanResult(FileTypeDetected.Compressed);
                 return true;
             }
             else if (bytes[0] == 0x1F && bytes[1] == 0x8B)
             {
                 // GZIP
-                result = new FileDetectionResult(FileTypeDetected.Compressed);
+                result = new FileScanResult(FileTypeDetected.Compressed);
                 return true;
             }
             else if (bytes[0] == 0xFF && bytes[1] == 0xD8)
             {
                 // JPG
-                result = new FileDetectionResult(FileTypeDetected.Image);
+                result = new FileScanResult(FileTypeDetected.Image);
                 return true;
             }
             else if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[2] == 0x47)
             {
                 // PNG
-                result = new FileDetectionResult(FileTypeDetected.Image);
+                result = new FileScanResult(FileTypeDetected.Image);
                 return true;
             }
 
