@@ -21,7 +21,9 @@ namespace StringSearch
     }
 
     // TODO:
-    //  - Files > 2 GB?
+    //  - Files > 2 GB? (Want to search ranges, not full file)
+    //  - Need newline mapping
+    //  - Need to get vectorized stuff going
 
     public class FileSearcher
     {
@@ -39,7 +41,7 @@ namespace StringSearch
         public string ValueToFind { get; }
         private byte[] BytesToFind { get; }
 
-        private ArrayPool<byte> Pool { get; } = ArrayPool<byte>.Create();
+        private ArrayPool<byte> Pool { get; } = ArrayPool<byte>.Shared;
 
         public long BytesSearched => _bytesSearched;
         private long _bytesSearched;
@@ -74,7 +76,7 @@ namespace StringSearch
             }
             else
             {
-                foreach(string path in filePaths)
+                foreach (string path in filePaths)
                 {
                     List<Match> fileMatches = SearchFile(path);
 
@@ -102,35 +104,48 @@ namespace StringSearch
 
             if (this.FilterOnFirstBytes)
             {
-                Span<byte> contents = null;
                 FileScanResult result = default;
+                byte[] buffer = Pool.Rent(PrefixBytesToLoad);
 
-                using (FileStream stream = File.OpenRead(filePath))
+                try
                 {
-                    int prefixLength = Math.Min((int)stream.Length, PrefixBytesToLoad);
-                    //byte[] buffer = new byte[(int)stream.Length]; 
-                    byte[] buffer = Pool.Rent((int)stream.Length);
-                    contents = buffer;
+                    Span<byte> view = null;
 
-                    int prefixLengthRead = stream.Read(contents.Slice(0, prefixLength));
-                    contents = contents.Slice(0, prefixLengthRead);
-
-                    result = FileTypeScanner.Identify(contents.Slice(0, Math.Min(prefixLengthRead, PrefixBytesToCheck)));
-
-                    if (result.Type == FileTypeDetected.UTF8)
+                    using (FileStream stream = File.OpenRead(filePath))
                     {
-                        int remainderRead = stream.Read(buffer.AsSpan().Slice(prefixLengthRead));
-                        contents = buffer.AsSpan().Slice(0, prefixLengthRead + remainderRead);
-                        contents = contents.Slice(result.BomByteCount);
+                        int prefixLength = Math.Min((int)stream.Length, PrefixBytesToLoad);
+                        view = buffer;
+                        view = view.Slice(0, prefixLength);
 
-                        List<Match> matches = SearchFileUtf8(filePath, contents);
-                        Pool.Return(buffer);
-                        return matches;
+                        int prefixLengthRead = stream.Read(view);
+                        view = view.Slice(0, prefixLengthRead);
+
+                        result = FileTypeScanner.Identify(view.Slice(0, Math.Min(prefixLengthRead, PrefixBytesToCheck)));
+
+                        if (result.Type == FileTypeDetected.UTF8)
+                        {
+                            if (stream.Length > view.Length)
+                            {
+                                byte[] fullFileBuffer = Pool.Rent((int)stream.Length);
+
+                                view.CopyTo(fullFileBuffer);
+                                Pool.Return(buffer);
+                                buffer = fullFileBuffer;
+                                view = fullFileBuffer;
+
+                                int remainderRead = stream.Read(view.Slice(prefixLengthRead));
+                                view = buffer.AsSpan().Slice(0, prefixLengthRead + remainderRead);
+                            }
+
+                            view = view.Slice(result.BomByteCount);
+
+                            return SearchFileUtf8(filePath, view);
+                        }
                     }
-                    else
-                    {
-                        Pool.Return(buffer);
-                    }
+                }
+                finally
+                {
+                    Pool.Return(buffer);
                 }
 
                 if (result.Type == FileTypeDetected.UnicodeOther)
