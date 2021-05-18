@@ -111,7 +111,8 @@ namespace StringSearch
             DirectorySearcher searcher = new DirectorySearcher(
                 mode: FileSearcherMode.Utf8,
                 multithreaded: false,
-                filterOnFileExtension: false
+                filterOnFileExtension: false,
+                filterOnFirstBytes: false
             );
 
             int iterations = 1;

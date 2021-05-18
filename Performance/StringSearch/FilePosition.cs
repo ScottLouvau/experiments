@@ -14,15 +14,15 @@
         {
             if (LineNumber > 0)
             {
-                return $"{FilePath}({LineNumber:n0}, {CharInLine:n0})";
+                return $"{FilePath} ({LineNumber:n0}, {CharInLine:n0})";
             }
             else if(ByteOffset == 0 && CharOffset > 0)
             {
-                return $"{FilePath} @{CharOffset:n0}c";
+                return $"{FilePath} @char: {CharOffset:n0}";
             }
             else
             {
-                return $"{FilePath} @{ByteOffset:n0}b";
+                return $"{FilePath} @byte: {ByteOffset:n0}";
             }
         }
     }

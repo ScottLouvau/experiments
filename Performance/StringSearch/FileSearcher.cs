@@ -146,11 +146,11 @@ namespace StringSearch
         }
     }
 
-    public class Utf8FileSearcher : IFileSearcher
+    public class Utf8WholeSearcher : IFileSearcher
     {
         private byte[] ValueToFind { get; }
 
-        public Utf8FileSearcher(string valueToFind)
+        public Utf8WholeSearcher(string valueToFind)
         {
             ValueToFind = Encoding.UTF8.GetBytes(valueToFind);
         }
@@ -183,6 +183,71 @@ namespace StringSearch
 
                 startIndex += matchIndex + 1;
                 contents = contents.Slice(matchIndex + 1);
+            }
+
+            return matches;
+        }
+    }
+
+    public class Utf8FileSearcher : IFileSearcher
+    {
+        private const int ReadBlockSizeBytes = 64 * 1024;
+        private byte[] ValueToFind { get; }
+
+        public Utf8FileSearcher(string valueToFind)
+        {
+            ValueToFind = Encoding.UTF8.GetBytes(valueToFind);
+        }
+
+        public List<FilePosition> Search(string filePath)
+        {
+            using (Stream stream = File.OpenRead(filePath))
+            {
+                return Search(stream, filePath);
+            }
+        }
+
+        public List<FilePosition> Search(Stream streamToSearch, string filePath)
+        {
+            List<FilePosition> matches = null;
+
+            long bytesBeforeContent = 0;
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(ReadBlockSizeBytes);
+
+            int bytesRead = streamToSearch.Read(buffer);
+            Span<byte> content = buffer.AsSpan().Slice(0, bytesRead);
+
+            while (true)
+            {
+                // Find and capture matches
+                while (true)
+                {
+                    int matchIndex = content.IndexOf(ValueToFind);
+                    if (matchIndex == -1) { break; }
+
+                    matches ??= new List<FilePosition>();
+                    matches.Add(new FilePosition() { FilePath = filePath, ByteOffset = bytesBeforeContent + matchIndex });
+
+                    bytesBeforeContent += matchIndex + 1;
+                    content = content.Slice(matchIndex + 1);
+                }
+
+                // Stop when the last read returned no bytes (end of file)
+                if (bytesRead == 0) { break; }
+
+                // Keep the last ValueToFind-1 bytes, in case a match was just off the end of the read buffer
+                if (content.Length >= ValueToFind.Length)
+                {
+                    bytesBeforeContent += (content.Length - (ValueToFind.Length - 1));
+                    content = content.Slice(content.Length - (ValueToFind.Length - 1));
+                }
+
+                // Copy unused bytes to buffer start
+                content.CopyTo(buffer);
+
+                // Refill remainder of buffer
+                bytesRead = streamToSearch.Read(buffer.AsSpan(content.Length));
+                content = buffer.AsSpan().Slice(0, content.Length + bytesRead);
             }
 
             return matches;
