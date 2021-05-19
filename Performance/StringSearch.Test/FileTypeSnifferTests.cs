@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -6,10 +5,8 @@ using Xunit;
 
 namespace StringSearch.Test
 {
-    public class FileTypeSnifferTests
+    public class FileTypeSnifferTests : TestBase
     {
-        public readonly string ContentFolderPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "Content"));
-
         [Fact]
         public void FileSniffer_Prefixes()
         {
@@ -27,6 +24,10 @@ namespace StringSearch.Test
             Assert.Equal(FileTypeDetected.UTF8, result.Type);
             Assert.Equal(0, result.BomByteCount);
             Assert.False(result.BomFound);
+
+            // Multi-byte without continuation (invalid)
+            result = FileTypeSniffer.Sniff(new byte[] { 0x50, 0xC1, 0x52 });
+            Assert.Equal(FileTypeDetected.OtherNonUtf8, result.Type);
 
             // UTF-8, no BOM
             result = FileTypeSniffer.Sniff(File.ReadAllBytes(Path.Combine(ContentFolderPath, "Simple.UTF8.NoBOM.txt")));
@@ -103,30 +104,6 @@ namespace StringSearch.Test
             // PNG
             result = FileTypeSniffer.Sniff(File.ReadAllBytes(Path.Combine(ContentFolderPath, "Simple.png")));
             Assert.Equal(FileTypeDetected.Image, result.Type);
-        }
-
-
-        [Fact]
-        public void FileSniffer_InvalidUtf8Detection()
-        {
-            // Empty/Null return as invalid (nothing meaningful to find anyway)
-            Assert.True(FileTypeSniffer.IsInvalidUtf8(null));
-            Assert.True(FileTypeSniffer.IsInvalidUtf8(new byte[0]));
-
-            // All Ascii
-            Assert.False(FileTypeSniffer.IsInvalidUtf8(Encoding.UTF8.GetBytes("Hello")));
-
-            // All continuations (no invalid pairs to find)
-            Assert.False(FileTypeSniffer.IsInvalidUtf8(new byte[] { 0x80, 0x81, 0x95, 0xA1, 0xB3, 0xBF }));
-
-            // Multi-byte with continuations
-            Assert.False(FileTypeSniffer.IsInvalidUtf8(new byte[] { 0xE0, 0x81, 0x82, 0xD1, 0xB0, 0xB1 }));
-
-            // Ascii with continuation (invalid)
-            Assert.True(FileTypeSniffer.IsInvalidUtf8(new byte[] { 0x50, 0x51, 0x82 }));
-
-            // Multi-byte without continuation (invalid)
-            Assert.True(FileTypeSniffer.IsInvalidUtf8(new byte[] { 0x50, 0xC1, 0x52 }));
         }
     }
 }

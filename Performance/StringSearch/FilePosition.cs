@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Text;
 
 namespace StringSearch
 {
@@ -14,20 +12,13 @@ namespace StringSearch
         public int LineNumber;
         public int CharInLine;
 
+        public string LineAndChar => $"({LineNumber}, {CharInLine})";
+
+        public static FilePosition Start(string filePath) => new FilePosition() { FilePath = filePath, LineNumber = 1, CharInLine = 1 };
+
         public override string ToString()
         {
-            if (LineNumber > 0)
-            {
-                return $"{FilePath} ({LineNumber:n0}, {CharInLine:n0}) @C {CharOffset:n0}; @B {ByteOffset:n0}";
-            }
-            else if (ByteOffset == 0 && CharOffset > 0)
-            {
-                return $"{FilePath} @C {CharOffset:n0}";
-            }
-            else
-            {
-                return $"{FilePath} @B {ByteOffset:n0}";
-            }
+            return $"{FilePath} {LineAndChar} @C {CharOffset:n0}; @B {ByteOffset:n0}";
         }
 
         public static FilePosition Update(FilePosition start, ReadOnlySpan<char> content)
@@ -72,19 +63,9 @@ namespace StringSearch
                 content = content.Slice(nextNewline + 1);
             }
 
-            // Find the CharInLine at the end of the buffer
-            int continuations = 0;
-            for (int i = 0; i < content.Length; ++i)
-            {
-                if (content[i] >= 0x80 && content[i] < 0xC0) { continuations++; }
-                //if (content[i] - 0x80 < 0x40) { continuations++; }
-            }
+            // Count codepoints after the last newline
+            current.CharInLine += Utf8.CodepointCount(content);
 
-            // Or, to match .NET char count rather than UTF-8 codepoint count:
-            //int dotNetCount = Encoding.UTF8.GetCharCount(content);
-            //Debug.Assert(content.Length - continuations == dotNetCount);
-
-            current.CharInLine += content.Length - continuations;
             return current;
         }
 
@@ -103,15 +84,9 @@ namespace StringSearch
                 content = content.Slice(lastLineIndex + 1);
             }
 
-            // Find the CharInLine at the end of the buffer
-            int continuations = 0;
-            for (int i = 0; i < content.Length; ++i)
-            {
-                if (content[i] >= 0x80 && content[i] < 0xC0) { continuations++; }
-                //if (content[i] - 0x80 < 0x40) { continuations++; }
-            }
+            // Count codepoints after the last newline
+            current.CharInLine += Utf8.CodepointCount(content);
 
-            current.CharInLine += content.Length - continuations;
             return current;
         }
     }

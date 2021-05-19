@@ -173,7 +173,7 @@ namespace StringSearch
                 contents = reader.ReadToEnd();
             }
 
-            FilePosition current = new FilePosition() { FilePath = filePath, ByteOffset = 0, CharOffset = 0, LineNumber = 1, CharInLine = 1 };
+            FilePosition current = FilePosition.Start(filePath);
 
             while (true)
             {
@@ -268,7 +268,7 @@ namespace StringSearch
             Span<byte> content = buffer.AsSpan().Slice(0, bytesRead);
             totalBytesRead += bytesRead;
 
-            FilePosition current = new FilePosition() { FilePath = filePath, ByteOffset = 0, CharOffset = 0, LineNumber = 1, CharInLine = 1 };
+            FilePosition current = FilePosition.Start(filePath);
 
             while (true)
             {
