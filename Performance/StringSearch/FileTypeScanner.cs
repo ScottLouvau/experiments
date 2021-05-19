@@ -95,37 +95,38 @@ namespace StringSearch
             }
             else if (bytes[0] == 0x5A && bytes[1] == 0x4D && bytes.Length >= 14 && bytes[12] == 0xFF && bytes[13] == 0xFF)
             {
-                // PE 'MZ' header, then Dos Stub, or at least illegal UTF-8.
+                // PE: 'MZ', then DOS stub.
                 result = new FileScanResult(FileTypeDetected.Executable);
                 return true;
             }
             else if (bytes[0] == 0x50 && bytes[1] == 0x4B && bytes[2] == 0x03 && bytes[4] == 0x04)
             {
-                // ZIP
+                // ZIP: 'PK' 0x03 0x04
                 result = new FileScanResult(FileTypeDetected.Compressed);
                 return true;
             }
             else if (bytes[0] == 0x78 && (bytes[1] == 0x01 || bytes[1] == 0x9C || bytes[1] == 0x5E || bytes[1] == 0xDA))
             {
-                // ZLIB (including Git object files)
+                // ZLIB: 0x78 [0x01 | 0x9C | 0x5E | 0xDA] (compression levels)
+                //  (covers Git object files, which are plentiful in an active repo)
                 result = new FileScanResult(FileTypeDetected.Compressed);
                 return true;
             }
             else if (bytes[0] == 0x1F && bytes[1] == 0x8B)
             {
-                // GZIP
+                // GZIP: 0x1F 0x8B
                 result = new FileScanResult(FileTypeDetected.Compressed);
                 return true;
             }
             else if (bytes[0] == 0xFF && bytes[1] == 0xD8)
             {
-                // JPG
+                // JPG: 0xFF 0xD8
                 result = new FileScanResult(FileTypeDetected.Image);
                 return true;
             }
             else if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[2] == 0x47)
             {
-                // PNG
+                // PNG: 0x89 'PNG' 
                 result = new FileScanResult(FileTypeDetected.Image);
                 return true;
             }
