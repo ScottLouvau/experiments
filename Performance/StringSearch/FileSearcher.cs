@@ -70,7 +70,7 @@ namespace StringSearch
                 Span<byte> content = buffer.AsSpan().Slice(0, prefixLengthRead);
 
                 Span<byte> prefixToScan = content.Slice(0, Math.Min(prefixLengthRead, PrefixBytesToScan));
-                FileScanResult result = FileTypeScanner.Identify(prefixToScan);
+                FileSniffResult result = FileTypeSniffer.Sniff(prefixToScan);
 
                 if (result.Type == FileTypeDetected.UTF8)
                 {

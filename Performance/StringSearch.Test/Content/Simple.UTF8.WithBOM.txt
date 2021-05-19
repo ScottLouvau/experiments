@@ -1,0 +1,2 @@
+﻿This is a short sample UTF-8 file,
+used for FileTypeSniffer tests.

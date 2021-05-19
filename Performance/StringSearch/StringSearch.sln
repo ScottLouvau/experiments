@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31205.134
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StringSearch", "StringSearch.csproj", "{95E1FF53-EECF-4FB1-ACFA-D5611E30B510}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StringSearch", "StringSearch.csproj", "{95E1FF53-EECF-4FB1-ACFA-D5611E30B510}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StringSearch.Test", "..\StringSearch.Test\StringSearch.Test.csproj", "{EFB6A6E6-5089-4E6B-90EF-A53987D12925}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{95E1FF53-EECF-4FB1-ACFA-D5611E30B510}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{95E1FF53-EECF-4FB1-ACFA-D5611E30B510}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{95E1FF53-EECF-4FB1-ACFA-D5611E30B510}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EFB6A6E6-5089-4E6B-90EF-A53987D12925}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EFB6A6E6-5089-4E6B-90EF-A53987D12925}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EFB6A6E6-5089-4E6B-90EF-A53987D12925}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EFB6A6E6-5089-4E6B-90EF-A53987D12925}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
