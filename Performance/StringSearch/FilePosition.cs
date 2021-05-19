@@ -28,20 +28,18 @@ namespace StringSearch
             current.ByteOffset = 0;
             current.CharOffset += content.Length;
 
-            while (true)
+            // Count lines to the end of the buffer
+            int newlines = Utf8.CountAndLastIndex('\n', content, out int lastNewlineIndex);
+            if (newlines > 0)
             {
-                int nextNewline = content.IndexOf('\n');
-                if (nextNewline == -1) { break; }
-
-                current.LineNumber++;
+                current.LineNumber += newlines;
                 current.CharInLine = 1;
-
-                content = content.Slice(nextNewline + 1);
+                content = content.Slice(lastNewlineIndex + 1);
             }
 
             current.CharInLine += content.Length;
-            return current;
 
+            return current;
         }
 
         public static FilePosition Update(FilePosition start, ReadOnlySpan<byte> content)
@@ -52,36 +50,12 @@ namespace StringSearch
             current.CharOffset = 0;
 
             // Count lines to the end of the buffer
-            while (true)
+            int newlines = Utf8.CountAndLastIndex((byte)'\n', content, out int lastNewlineIndex);
+            if (newlines > 0)
             {
-                int nextNewline = content.IndexOf((byte)'\n');
-                if (nextNewline == -1) { break; }
-
-                current.LineNumber++;
+                current.LineNumber += newlines;
                 current.CharInLine = 1;
-
-                content = content.Slice(nextNewline + 1);
-            }
-
-            // Count codepoints after the last newline
-            current.CharInLine += Utf8.CodepointCount(content);
-
-            return current;
-        }
-
-        public static FilePosition Update2(FilePosition start, ReadOnlySpan<byte> content)
-        {
-            FilePosition current = start;
-
-            current.ByteOffset += content.Length;
-            current.CharOffset = 0;
-
-            // Count lines to the end of the buffer
-            current.LineNumber += Vector.NewlineCount(content, out int lastLineIndex);
-
-            if (lastLineIndex > 0)
-            {
-                content = content.Slice(lastLineIndex + 1);
+                content = content.Slice(lastNewlineIndex + 1);
             }
 
             // Count codepoints after the last newline

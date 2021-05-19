@@ -72,6 +72,58 @@ namespace StringSearch
             return content.Length - continuations;
         }
 
+        /// <summary>
+        ///  Return the number of occurrences of a byte in the sequence,
+        ///  and the index of the last one found.
+        /// </summary>
+        /// <param name="c">Byte to find</param>
+        /// <param name="content">Span of bytes to search</param>
+        /// <param name="lastIndex">Index where last match was found or -1</param>
+        /// <returns>Number of occurrences found</returns>
+        public static int CountAndLastIndex(byte c, ReadOnlySpan<byte> content, out int lastIndex)
+        {
+            lastIndex = -1;
+            int count = 0;
+
+            while (true)
+            {
+                int next = content.IndexOf(c);
+                if (next == -1) { break; }
+
+                count++;
+                lastIndex += (next + 1);
+                content = content.Slice(next + 1);
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        ///  Return the number of occurrences of a char in the sequence,
+        ///  and the index of the last one found.
+        /// </summary>
+        /// <param name="c">Char to find</param>
+        /// <param name="content">Span of chars to search</param>
+        /// <param name="lastIndex">Index where last match was found or -1</param>
+        /// <returns>Number of occurrences found</returns>
+        public static int CountAndLastIndex(char c, ReadOnlySpan<char> content, out int lastIndex)
+        {
+            lastIndex = -1;
+            int count = 0;
+
+            while (true)
+            {
+                int next = content.IndexOf(c);
+                if (next == -1) { break; }
+
+                count++;
+                lastIndex += (next + 1);
+                content = content.Slice(next + 1);
+            }
+
+            return count;
+        }
+
         public static bool IsSingleByte(byte b)
         {
             return (b < 0x80);
