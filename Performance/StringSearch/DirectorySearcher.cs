@@ -112,83 +112,10 @@ namespace StringSearch
 
             return result;
         }
-
-        //private List<FilePosition> SearchFile(string filePath)
-        //{
-        //    if (this.FilterOnFileExtension)
-        //    {
-        //        string extension = Path.GetExtension(filePath).ToLowerInvariant();
-
-        //        if (extension == "" || extension == ".dll" || extension == ".exe" || extension == ".zip")
-        //        {
-        //            return null;
-        //        }
-        //    }
-
-        //    if (this.FilterOnFirstBytes)
-        //    {
-        //        FileScanResult result = default;
-        //        byte[] buffer = Pool.Rent(PrefixBytesToLoad);
-
-        //        try
-        //        {
-        //            Span<byte> view = null;
-
-        //            using (FileStream stream = File.OpenRead(filePath))
-        //            {
-        //                int prefixLength = Math.Min((int)stream.Length, PrefixBytesToLoad);
-        //                view = buffer;
-        //                view = view.Slice(0, prefixLength);
-
-        //                int prefixLengthRead = stream.Read(view);
-        //                view = view.Slice(0, prefixLengthRead);
-
-        //                result = FileTypeScanner.Identify(view.Slice(0, Math.Min(prefixLengthRead, PrefixBytesToCheck)));
-
-        //                if (result.Type == FileTypeDetected.UTF8)
-        //                {
-        //                    if (stream.Length > view.Length)
-        //                    {
-        //                        byte[] fullFileBuffer = Pool.Rent((int)stream.Length);
-
-        //                        view.CopyTo(fullFileBuffer);
-        //                        Pool.Return(buffer);
-        //                        buffer = fullFileBuffer;
-        //                        view = fullFileBuffer;
-
-        //                        int remainderRead = stream.Read(view.Slice(prefixLengthRead));
-        //                        view = buffer.AsSpan().Slice(0, prefixLengthRead + remainderRead);
-        //                    }
-
-        //                    view = view.Slice(result.BomByteCount);
-
-        //                    return SearchFileUtf8(filePath, view);
-        //                }
-        //            }
-        //        }
-        //        finally
-        //        {
-        //            Pool.Return(buffer);
-        //        }
-
-        //        if (result.Type == FileTypeDetected.UnicodeOther)
-        //        {
-        //            return SearchFileDotNet(filePath, File.ReadAllText(filePath));
-        //        }
-        //        else
-        //        {
-        //            return null;
-        //        }
-        //    }
-
-        //    if (this.Mode == FileSearcherMode.DotNetDefault)
-        //    {
-        //        return SearchFileDotNet(filePath, File.ReadAllText(filePath));
-        //    }
-        //    else
-        //    {
-        //        return SearchFileUtf8(filePath, File.ReadAllBytes(filePath));
-        //    }
-        //}
+         
+        public List<FilePosition> FindMatches(string valueToFind, string filePath)
+        {
+            return BuildSearcher(valueToFind).Search(filePath);
+        }
     }
 }
