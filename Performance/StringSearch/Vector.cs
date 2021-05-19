@@ -18,63 +18,53 @@ namespace StringSearch
             return Unsafe.Read<Vector256<sbyte>>(_loader);
         }
 
-        private static Vector128<sbyte> SetVector128To(byte value)
+        public static int CountAndLastIndex(byte b, ReadOnlySpan<byte> content, out int lastIndex)
         {
-            sbyte* _loader = stackalloc sbyte[16];
-            for (int i = 0; i < 16; ++i)
-            {
-                _loader[i] = unchecked((sbyte)value);
-            }
-
-            return Unsafe.Read<Vector128<sbyte>>(_loader);
-        }
-
-        public static int NewlineCount(ReadOnlySpan<byte> content, out int lastNewlineIndex)
-        {
-            lastNewlineIndex = -1;
-            int newlineCount = 0;
+            lastIndex = -1;
+            int count = 0;
 
             int i = 0;
-            int fullBlockLength = content.Length - 32;
+            int fullBlockEnd = content.Length - 32;
 
-            if (i < fullBlockLength)
+            if (i < fullBlockEnd)
             {
                 fixed (byte* contentPtr = &content[0])
                 {
-                    Vector256<sbyte> newlineV = SetVector256To((byte)'\n');
+                    Vector256<sbyte> newlineV = SetVector256To(b);
 
-                    for (; i < fullBlockLength; i += 32)
+                    for (; i < fullBlockEnd; i += 32)
                     {
                         // Load a vector of bytes
                         Vector256<sbyte> contentV = Unsafe.ReadUnaligned<Vector256<sbyte>>(&contentPtr[i]);
 
                         // Find newlines and convert to a bit vector
                         Vector256<sbyte> matches = Avx2.CompareEqual(newlineV, contentV);
-                        uint newlineBits = unchecked((uint)Avx2.MoveMask(matches));
+                        uint matchBits = unchecked((uint)Avx2.MoveMask(matches));
 
                         // Count the newlines seen
-                        int lineCount = (int)Popcnt.PopCount(newlineBits);
-                        newlineCount += lineCount;
+                        int thisCount = (int)Popcnt.PopCount(matchBits);
+                        count += thisCount;
 
-                        if (lineCount > 0)
+                        if (thisCount > 0)
                         {
-                            lastNewlineIndex = i + (int)Bmi1.TrailingZeroCount(newlineBits);
+                            int bytesAfterLast = (int)Lzcnt.LeadingZeroCount(matchBits);
+                            lastIndex = i + 31 - bytesAfterLast;
                         }
                     }
                 }
             }
 
-            // Count newlines after the end of the block
+            // Count matches after the end of the block
             for (; i < content.Length; ++i)
             {
-                if (content[i] == (byte)'\n')
+                if (content[i] == b)
                 {
-                    newlineCount++;
-                    lastNewlineIndex = i;
+                    count++;
+                    lastIndex = i;
                 }
             }
 
-            return newlineCount;
+            return count;
         }
     }
 }
