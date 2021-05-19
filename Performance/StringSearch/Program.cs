@@ -69,7 +69,7 @@ namespace StringSearch
             string directoryToSearch = Path.GetFullPath((args.Length > 1 ? args[1] : Environment.CurrentDirectory));
             string searchPattern = (args.Length > 2 ? args[2] : "*.*");
 
-            FileSearcherMode mode = FileSearcherMode.DotNet;
+            FileSearcherMode mode = FileSearcherMode.Utf8;
 
             Console.WriteLine($"Searching for \"{valueToFind}\" via {mode} in '{directoryToSearch}'...");
             Stopwatch w = Stopwatch.StartNew();
@@ -83,7 +83,7 @@ namespace StringSearch
                 filterOnFirstBytes: false
             );
 
-            int iterations = 20;
+            int iterations = 1;
             for (int i = 0; i < iterations; ++i)
             {
                 matches = searcher.FindMatches(valueToFind, directoryToSearch, searchPattern);

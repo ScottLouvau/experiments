@@ -184,6 +184,7 @@ namespace StringSearch
                 matches ??= new List<FilePosition>();
                 matches.Add(current);
 
+                current.CharOffset++;
                 current.CharInLine++;
                 contents = contents.Slice(matchIndex + 1);
             }
@@ -237,7 +238,8 @@ namespace StringSearch
 
     public class Utf8FileSearcher : IFileSearcher
     {
-        private const int ReadBlockSizeBytes = 64 * 1024;
+        private const int FirstBlockSizeBytes = 64 * 1024;
+        private const int NextBlockSizeBytes = 512 * 1024;
         private byte[] ValueToFind { get; }
 
         public Utf8FileSearcher(string valueToFind)
@@ -257,11 +259,16 @@ namespace StringSearch
         {
             List<FilePosition> matches = null;
 
-            long bytesBeforeContent = 0;
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(ReadBlockSizeBytes);
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(NextBlockSizeBytes);
 
-            int bytesRead = streamToSearch.Read(buffer);
+            long totalBytesRead = 0;
+            long totalFileBytes = streamToSearch.Length - streamToSearch.Position;
+
+            int bytesRead = streamToSearch.Read(buffer.AsSpan().Slice(0, FirstBlockSizeBytes));
             Span<byte> content = buffer.AsSpan().Slice(0, bytesRead);
+            totalBytesRead += bytesRead;
+
+            FilePosition current = new FilePosition() { FilePath = filePath, ByteOffset = 0, CharOffset = 0, LineNumber = 1, CharInLine = 1 };
 
             while (true)
             {
@@ -271,21 +278,24 @@ namespace StringSearch
                     int matchIndex = content.IndexOf(ValueToFind);
                     if (matchIndex == -1) { break; }
 
+                    current = FilePosition.Update(current, content.Slice(0, matchIndex));
                     matches ??= new List<FilePosition>();
-                    matches.Add(new FilePosition() { FilePath = filePath, ByteOffset = bytesBeforeContent + matchIndex });
+                    matches.Add(current);
 
-                    bytesBeforeContent += matchIndex + 1;
+                    current.ByteOffset++;
+                    current.CharInLine++;
                     content = content.Slice(matchIndex + 1);
                 }
 
-                // Stop when the last read returned no bytes (end of file)
-                if (bytesRead == 0) { break; }
+                // Stop when all bytes have been read
+                if (totalBytesRead >= totalFileBytes) { break; }
 
                 // Keep the last ValueToFind-1 bytes, in case a match was just off the end of the read buffer
                 if (content.Length >= ValueToFind.Length)
                 {
-                    bytesBeforeContent += (content.Length - (ValueToFind.Length - 1));
-                    content = content.Slice(content.Length - (ValueToFind.Length - 1));
+                    int bytesToSkip = (content.Length - (ValueToFind.Length - 1));
+                    current = FilePosition.Update(current, content.Slice(0, bytesToSkip));
+                    content = content.Slice(bytesToSkip);
                 }
 
                 // Copy unused bytes to buffer start
@@ -294,6 +304,7 @@ namespace StringSearch
                 // Refill remainder of buffer
                 bytesRead = streamToSearch.Read(buffer.AsSpan(content.Length));
                 content = buffer.AsSpan().Slice(0, content.Length + bytesRead);
+                totalBytesRead += bytesRead;
             }
 
             return matches;
