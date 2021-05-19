@@ -41,33 +41,19 @@ namespace StringSearch
             switch (this.Mode)
             {
                 case FileSearcherMode.DotNet:
-                    fileSearcher = new DotNetFileSearcher(valueToFind);
+                    fileSearcher = new DotNetSearcher(valueToFind);
                     break;
 
                 case FileSearcherMode.DotNetUnpositioned:
-                    fileSearcher = new DotNetUnpositionedFileSearcher(valueToFind);
+                    fileSearcher = new DotNetBasicSearcher(valueToFind);
                     break;
 
                 case FileSearcherMode.Utf8:
-                    fileSearcher = new Utf8Searcher(valueToFind);
-                    break;
-
-                case FileSearcherMode.Utf8Whole:
-                    fileSearcher = new Utf8WholeSearcher(valueToFind);
+                    fileSearcher = new Utf8Searcher(valueToFind, FilterOnFirstBytes);
                     break;
 
                 default:
                     throw new NotImplementedException($"FileSearcherMode {Mode} not implemented.");
-            }
-
-            if (this.FilterOnFirstBytes)
-            {
-                fileSearcher = new FilePrefixFilter(fileSearcher, new DotNetFileSearcher(valueToFind));
-            }
-
-            if (this.FilterOnFileExtension)
-            {
-                fileSearcher = new FileExtensionFilter(fileSearcher);
             }
 
             return fileSearcher;
@@ -82,35 +68,40 @@ namespace StringSearch
 
             if (this.Multithreaded)
             {
-                Parallel.ForEach(filePaths, (path) =>
-                {
-                    List<FilePosition> fileMatches = fileSearcher.Search(path);
-
-                    if (fileMatches != null)
-                    {
-                        lock (result)
-                        {
-                            result.AddRange(fileMatches);
-                        }
-                    }
-                });
+                Parallel.ForEach(filePaths, (path) => SearchFile(path, fileSearcher, result));
             }
             else
             {
                 foreach (string path in filePaths)
                 {
-                    List<FilePosition> fileMatches = fileSearcher.Search(path);
-
-                    if (fileMatches != null)
-                    {
-                        result.AddRange(fileMatches);
-                    }
+                    SearchFile(path, fileSearcher, result);
                 }
             }
 
             return result;
         }
-         
+
+        private void SearchFile(string path, IFileSearcher fileSearcher, List<FilePosition> result)
+        {
+            if (FilterOnFileExtension && IsExcluded(path)) { return; }
+
+            List<FilePosition> fileMatches = fileSearcher.Search(path);
+
+            if (fileMatches != null)
+            {
+                lock (result)
+                {
+                    result.AddRange(fileMatches);
+                }
+            }
+        }
+
+        public bool IsExcluded(string filePath)
+        {
+            string extension = Path.GetExtension(filePath).ToLowerInvariant();
+            return (extension == "" || extension == ".dll" || extension == ".exe" || extension == ".pdb");
+        }
+
         public List<FilePosition> FindMatches(string valueToFind, string filePath)
         {
             return BuildSearcher(valueToFind).Search(filePath);

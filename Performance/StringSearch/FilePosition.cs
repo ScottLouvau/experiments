@@ -13,12 +13,24 @@ namespace StringSearch
         public int CharInLine;
 
         public string LineAndChar => $"({LineNumber}, {CharInLine})";
+        public string Offset => (CharOffset > 0 ? $"[{CharOffset:n0}c]" : $"[{ByteOffset:n0}b]");
 
         public static FilePosition Start(string filePath) => new FilePosition() { FilePath = filePath, LineNumber = 1, CharInLine = 1 };
 
         public override string ToString()
         {
-            return $"{FilePath} {LineAndChar} @C {CharOffset:n0}; @B {ByteOffset:n0}";
+            return $"{FilePath} {LineAndChar}";
+        }
+
+        public static int FileLineCharOrder(FilePosition left, FilePosition right)
+        {
+            int cmp = left.FilePath.CompareTo(right.FilePath);
+            if (cmp != 0) { return cmp; }
+
+            cmp = left.LineNumber.CompareTo(right.LineNumber);
+            if (cmp != 0) { return cmp; }
+
+            return left.CharInLine.CompareTo(right.CharInLine);
         }
 
         public static FilePosition Update(FilePosition start, ReadOnlySpan<char> content)

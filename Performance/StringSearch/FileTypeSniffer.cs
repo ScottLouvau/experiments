@@ -28,6 +28,8 @@ namespace StringSearch
 
     public class FileTypeSniffer
     {
+        public const int RecommendedSniffBytes = 1024;
+
         /// <summary>
         ///  Identify tries to identify a file using the initial bytes.
         ///  It checks for byte-order-marks and well known file formats,

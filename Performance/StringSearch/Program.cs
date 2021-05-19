@@ -65,13 +65,26 @@ namespace StringSearch
     {
         static void Main(string[] args)
         {
+            if (args.Length < 1)
+            {
+                Console.WriteLine("Usage: StringSearch [valueToFind] [searchUnderPath?] [fileExtension?] [logMatchesToPath?]");
+                Console.WriteLine("   ex: StringSearch \"Console.WriteLine\" \"C:\\Code\" \"*.cs\" \"ConsoleLoggingClasses.log\"");
+                Console.WriteLine();
+                Console.WriteLine("  Finds 'valueToFind' in all text files ");
+                Console.WriteLine("  under [searchUnderPath] (or current directory)");
+                Console.WriteLine("  matching [fileExtension] (or *.*)");
+                Console.WriteLine("  and writes sorted match list to log path, if provided.");
+            }
+
             string valueToFind = args[0];
             string directoryToSearch = Path.GetFullPath((args.Length > 1 ? args[1] : Environment.CurrentDirectory));
             string searchPattern = (args.Length > 2 ? args[2] : "*.*");
+            string logMatchesToPath = (args.Length > 3 ? args[3] : null);
 
-            FileSearcherMode mode = FileSearcherMode.Utf8;
+            FileSearcherMode mode = FileSearcherMode.DotNet;
+            int iterations = 1;
 
-            Console.WriteLine($"Searching for \"{valueToFind}\" via {mode} in '{directoryToSearch}'...");
+            Console.WriteLine($"Searching for \"{valueToFind}\" in '{directoryToSearch}'...");
             Stopwatch w = Stopwatch.StartNew();
 
             List<FilePosition> matches = null;
@@ -80,22 +93,38 @@ namespace StringSearch
                 mode: mode,
                 multithreaded: false,
                 filterOnFileExtension: true,
-                filterOnFirstBytes: false
+                filterOnFirstBytes: true
             );
 
-            int iterations = 1;
             for (int i = 0; i < iterations; ++i)
             {
                 matches = searcher.FindMatches(valueToFind, directoryToSearch, searchPattern);
             }
 
+            w.Stop();
             Console.WriteLine($"Found {matches.Count:n0} matches in {w.Elapsed.TotalSeconds:n3} sec.");
 
-            foreach (FilePosition m in matches.Take(20))
+            if (logMatchesToPath == null)
             {
-                Console.WriteLine($"{m}");
+                foreach (FilePosition m in matches.Take(20))
+                {
+                    Console.WriteLine($"{m}");
+                }
+            }
+            else
+            {
+                matches.Sort(FilePosition.FileLineCharOrder);
+
+                using (StreamWriter writer = File.CreateText(logMatchesToPath))
+                {
+                    foreach (FilePosition m in matches)
+                    {
+                        writer.WriteLine($"{m}");
+                    }
+                }
+
+                Console.WriteLine($"Sorted and logged to \"{logMatchesToPath}\".");
             }
         }
-
     }
 }
