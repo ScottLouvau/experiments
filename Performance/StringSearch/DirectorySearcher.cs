@@ -15,8 +15,6 @@ namespace StringSearch
 
     // TODO:
     //  - Files > 2 GB? (Want to search ranges, not full file)
-    //  - Need newline mapping
-    //  - Need to get vectorized stuff going
     //  - Not respecting FilterOnFirstBytes with Mode == DotNetDefault
     //  - Avoid/Reduce Match allocations?
     //  - Will Kirill want matches to a count limit or matches enumerator (for earlier first results?)
@@ -51,7 +49,7 @@ namespace StringSearch
                     break;
 
                 case FileSearcherMode.Utf8:
-                    fileSearcher = new Utf8FileSearcher(valueToFind);
+                    fileSearcher = new Utf8Searcher(valueToFind);
                     break;
 
                 case FileSearcherMode.Utf8Whole:
