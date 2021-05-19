@@ -58,10 +58,10 @@ namespace StringSearch
         /// <param name="bytes">First Bytes from file</param>
         /// <param name="result">FileDetectionResult identifying file and prefix byte length, if found</param>
         /// <returns>True if a known prefix detected, False otherwise</returns>
-        private static bool TryDetectByteOrderMark(Span<byte> bytes, out FileSniffResult result)
+        public static bool TryDetectByteOrderMark(Span<byte> bytes, out FileSniffResult result)
         {
             result = default;
-            if (bytes.Length < 4) { return false; }
+            if (bytes == null || bytes.Length < 4) { return false; }
 
             // Modelling Byte-Order-Mark detection in StreamReader.DetectEncoding
             // https://referencesource.microsoft.com/#mscorlib/system/io/streamreader.cs,ea5187ae9c79350e,references
@@ -168,10 +168,10 @@ namespace StringSearch
         /// </remarks>
         /// <param name="bytes">First Bytes from file to scan</param>
         /// <returns>True if a byte pair invalid in UTF-8 detected, False if bytes could be valid UTF-8</returns>
-        private static bool IsInvalidUtf8(Span<byte> bytes)
+        public static bool IsInvalidUtf8(Span<byte> bytes)
         {
             // Invalid UTF-8 detection informed by Lemire's "Validating UTF-8 In Less Than One Instruction Per Byte"
-            if (bytes.Length < 2) { return true; }
+            if (bytes == null || bytes.Length < 2) { return true; }
 
             byte last = bytes[0];
 
