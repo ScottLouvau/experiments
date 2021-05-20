@@ -80,22 +80,21 @@ namespace StringSearch
             string directoryToSearch = Path.GetFullPath((args.Length > 1 ? args[1] : Environment.CurrentDirectory));
             string searchPattern = (args.Length > 2 ? args[2] : "*.*");
             string logMatchesToPath = (args.Length > 3 ? args[3] : null);
+            FileSearcherMode mode = (args.Length > 4 ? Enum.Parse<FileSearcherMode>(args[4]) : FileSearcherMode.Utf8);
+            int iterations = (args.Length > 5 ? int.Parse(args[5]) : 1);
 
-            FileSearcherMode mode = FileSearcherMode.DotNet;
-            int iterations = 1;
 
             Console.WriteLine($"Searching for \"{valueToFind}\" in '{directoryToSearch}'...");
             Stopwatch w = Stopwatch.StartNew();
 
-            List<FilePosition> matches = null;
-
             DirectorySearcher searcher = new DirectorySearcher(
                 mode: mode,
-                multithreaded: false,
+                multithreaded: true,
                 filterOnFileExtension: true,
                 filterOnFirstBytes: true
             );
 
+            List<FilePosition> matches = null;
             for (int i = 0; i < iterations; ++i)
             {
                 matches = searcher.FindMatches(valueToFind, directoryToSearch, searchPattern);
