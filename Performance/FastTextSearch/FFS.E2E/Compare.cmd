@@ -1,7 +1,21 @@
-SET Search="%~dp0..\StringSearch\bin\Release\net5.0\StringSearch.exe"
+:: Compare UTF8 and DotNet search implementations. 
+:: Do a 'cold' run of each search first for a fairer comparison.
 
-%Search% Convert C:\Code\bion "*.*" Convert.bion.log
-%Search% Convert C:\Code\bion "*.*" Convert.bion.DotNet.log DotNet
+@ECHO OFF
+SET FFS="%~dp0..\FFS\bin\Release\net5.0\FFS.exe"
 
-%Search% Console.WriteLine C:\Code "*.*" CWR.log
-%Search% Console.WriteLine C:\Code "*.*" CWR.DotNet.log DotNet
+%FFS% Convert C:\Code\bion > nul
+ECHO.
+%FFS% Convert C:\Code\bion "*.*" Log\Bion.Convert.Utf8.log Utf8 20
+ECHO.
+%FFS% Convert C:\Code\bion "*.*" Log\Bion.Convert.DotNet.log DotNet 20
+
+%FFS% Console.WriteLine C:\Code > nul
+ECHO.
+%FFS% Console.WriteLine C:\Code "*.*" Log\Console.WriteLine.Code.Utf8.log Utf8
+ECHO.
+%FFS% Console.WriteLine C:\Code "*.*" Log\Console.WriteLine.Code.DotNet.log DotNet
+ECHO.
+
+
+

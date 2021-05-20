@@ -1,4 +1,8 @@
-SET Search="%~dp0..\StringSearch\bin\Release\net5.0\StringSearch.exe"
+@ECHO OFF
+SET FFS="%~dp0..\FFS\bin\Release\net5.0\FFS.exe"
 
-%Search% Console C:\Download\CSV\Big *.* Unused.log
-%Search% Console C:\Download\CSV\Big *.* Unused.log DotNet
+ECHO.
+%FFS% Console C:\Download\CSV\Big *.* Log\CSV.UTF8.log Utf8
+ECHO.
+%FFS% Console C:\Download\CSV\Big *.* Log\CSV.DotNet.log DotNet
+ECHO.

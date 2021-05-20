@@ -26,7 +26,7 @@ namespace FastTextSearch
 
         public List<FilePosition> FindMatches(string valueToFind, string directoryToSearch, string searchPattern)
         {
-            IFileSearcher fileSearcher = FileSearcherFactory.Build(valueToFind, this.FilterOnFirstBytes);
+            IFileSearcher fileSearcher = FileSearcherFactory.Build(this.Searcher, valueToFind, this.FilterOnFirstBytes);
 
             List<FilePosition> result = new List<FilePosition>();
             string[] filePaths = Directory.GetFiles(directoryToSearch, searchPattern, SearchOption.AllDirectories);
@@ -76,7 +76,7 @@ namespace FastTextSearch
 
         public List<FilePosition> FindMatches(string valueToFind, string filePath)
         {
-            return FileSearcherFactory.Build(valueToFind, this.FilterOnFirstBytes).Search(filePath);
+            return FileSearcherFactory.Build(this.Searcher, valueToFind, this.FilterOnFirstBytes).Search(filePath);
         }
     }
 }

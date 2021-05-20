@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "FFS": {
+      "commandName": "Project",
+      "commandLineArgs": "Convert C:\\Code\\bion"
+    }
+  }
+}

@@ -66,7 +66,7 @@ namespace FastTextSearch.Test
 
         private string AllMatches(string valueToFind, string filePath, FileSearcher searcher)
         {
-            List<FilePosition> matches = FileSearcherFactory.Build(valueToFind, searcher: searcher).Search(filePath);
+            List<FilePosition> matches = FileSearcherFactory.Build(searcher, valueToFind).Search(filePath);
             return (matches == null ? "" : string.Join("; ", matches.Select(m => m.LineAndChar)));
         }
     }

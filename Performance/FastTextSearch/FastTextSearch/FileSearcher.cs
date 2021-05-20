@@ -19,7 +19,7 @@ namespace FastTextSearch
 
     public static class FileSearcherFactory
     {
-        public static IFileSearcher Build(string valueToFind, bool scanFilePrefix = true, FileSearcher searcher = FileSearcher.Utf8)
+        public static IFileSearcher Build(FileSearcher searcher, string valueToFind, bool scanFilePrefix = true)
         {
             switch (searcher)
             {

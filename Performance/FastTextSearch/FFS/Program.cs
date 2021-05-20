@@ -68,8 +68,8 @@ namespace FFS
         {
             if (args.Length < 1)
             {
-                Console.WriteLine("Usage: FastTextSearch [valueToFind] [searchUnderPath?] [fileExtension?] [logMatchesToPath?]");
-                Console.WriteLine("   ex: FastTextSearch \"Console.WriteLine\" \"C:\\Code\" \"*.cs\" \"ConsoleLoggingClasses.log\"");
+                Console.WriteLine("Usage: FFS [valueToFind] [searchUnderPath?] [fileExtension?] [logMatchesToPath?]");
+                Console.WriteLine("   ex: FFS \"Console.WriteLine\" \"C:\\Code\" \"*.cs\" \"ConsoleLoggingClasses.log\"");
                 Console.WriteLine();
                 Console.WriteLine("  Finds 'valueToFind' in all text files ");
                 Console.WriteLine("  under [searchUnderPath] (or current directory)");
@@ -80,16 +80,16 @@ namespace FFS
             string valueToFind = args[0];
             string directoryToSearch = Path.GetFullPath((args.Length > 1 ? args[1] : Environment.CurrentDirectory));
             string searchPattern = (args.Length > 2 ? args[2] : "*.*");
-            string logMatchesToPath = (args.Length > 3 ? args[3] : null);
-            FileSearcher mode = (args.Length > 4 ? Enum.Parse<FileSearcher>(args[4]) : FileSearcher.Utf8);
+            string logMatchesToPath = (args.Length > 3 ? Path.GetFullPath(args[3]) : null);
+            FileSearcher searcher = (args.Length > 4 ? Enum.Parse<FileSearcher>(args[4]) : FileSearcher.Utf8);
             int iterations = (args.Length > 5 ? int.Parse(args[5]) : 1);
 
 
-            Console.WriteLine($"Searching for \"{valueToFind}\" in '{directoryToSearch}'...");
+            Console.WriteLine($"Searching for \"{valueToFind}\" with {searcher} in '{directoryToSearch}'{(iterations > 1 ? $" [{iterations:n0}x]" : "")}...");
             Stopwatch w = Stopwatch.StartNew();
 
-            DirectorySearcher searcher = new DirectorySearcher(
-                searcher: mode,
+            DirectorySearcher directorySearcher = new DirectorySearcher(
+                searcher: searcher,
                 multithreaded: true,
                 filterOnFileExtension: true,
                 filterOnFirstBytes: true
@@ -98,7 +98,7 @@ namespace FFS
             List<FilePosition> matches = null;
             for (int i = 0; i < iterations; ++i)
             {
-                matches = searcher.FindMatches(valueToFind, directoryToSearch, searchPattern);
+                matches = directorySearcher.FindMatches(valueToFind, directoryToSearch, searchPattern);
             }
 
             w.Stop();
@@ -115,6 +115,7 @@ namespace FFS
             {
                 matches.Sort(FilePosition.FileLineCharOrder);
 
+                Directory.CreateDirectory(Path.GetDirectoryName(logMatchesToPath));
                 using (StreamWriter writer = File.CreateText(logMatchesToPath))
                 {
                     foreach (FilePosition m in matches)
