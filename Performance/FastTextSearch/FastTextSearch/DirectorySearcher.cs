@@ -1,17 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
 namespace FastTextSearch
 {
-    public enum FileSearcherMode
-    {
-        Utf8,
-        DotNet,
-        Reference,
-    }
-
     // TODO:
     //  - Files > 2 GB? (Want to search ranges, not full file)
     //  - Avoid/Reduce Match allocations?
@@ -19,47 +11,22 @@ namespace FastTextSearch
 
     public class DirectorySearcher
     {
-        public FileSearcherMode Mode { get; }
+        public FileSearcher Searcher { get; }
         public bool Multithreaded { get; }
         public bool FilterOnFileExtension { get; }
         public bool FilterOnFirstBytes { get; }
 
-        public DirectorySearcher(FileSearcherMode mode = FileSearcherMode.Utf8, bool multithreaded = true, bool filterOnFileExtension = true, bool filterOnFirstBytes = true)
+        public DirectorySearcher(FileSearcher searcher = FileSearcher.Utf8, bool multithreaded = true, bool filterOnFileExtension = true, bool filterOnFirstBytes = true)
         {
-            Mode = mode;
+            Searcher = searcher;
             Multithreaded = multithreaded;
             FilterOnFileExtension = filterOnFileExtension;
             FilterOnFirstBytes = filterOnFirstBytes;
         }
 
-        private IFileSearcher BuildSearcher(string valueToFind)
-        {
-            IFileSearcher fileSearcher;
-
-            switch (this.Mode)
-            {
-                case FileSearcherMode.Utf8:
-                    fileSearcher = new Utf8Searcher(valueToFind, FilterOnFirstBytes);
-                    break;
-
-                case FileSearcherMode.DotNet:
-                    fileSearcher = new DotNetSearcher(valueToFind);
-                    break;
-
-                case FileSearcherMode.Reference:
-                    fileSearcher = new ReferenceSearcher(valueToFind);
-                    break;
-
-                default:
-                    throw new NotImplementedException($"FileSearcherMode {Mode} not implemented.");
-            }
-
-            return fileSearcher;
-        }
-
         public List<FilePosition> FindMatches(string valueToFind, string directoryToSearch, string searchPattern)
         {
-            IFileSearcher fileSearcher = BuildSearcher(valueToFind);
+            IFileSearcher fileSearcher = FileSearcherFactory.Build(valueToFind, this.FilterOnFirstBytes);
 
             List<FilePosition> result = new List<FilePosition>();
             string[] filePaths = Directory.GetFiles(directoryToSearch, searchPattern, SearchOption.AllDirectories);
@@ -109,7 +76,7 @@ namespace FastTextSearch
 
         public List<FilePosition> FindMatches(string valueToFind, string filePath)
         {
-            return BuildSearcher(valueToFind).Search(filePath);
+            return FileSearcherFactory.Build(valueToFind, this.FilterOnFirstBytes).Search(filePath);
         }
     }
 }

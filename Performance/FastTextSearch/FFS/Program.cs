@@ -81,7 +81,7 @@ namespace FFS
             string directoryToSearch = Path.GetFullPath((args.Length > 1 ? args[1] : Environment.CurrentDirectory));
             string searchPattern = (args.Length > 2 ? args[2] : "*.*");
             string logMatchesToPath = (args.Length > 3 ? args[3] : null);
-            FileSearcherMode mode = (args.Length > 4 ? Enum.Parse<FileSearcherMode>(args[4]) : FileSearcherMode.Utf8);
+            FileSearcher mode = (args.Length > 4 ? Enum.Parse<FileSearcher>(args[4]) : FileSearcher.Utf8);
             int iterations = (args.Length > 5 ? int.Parse(args[5]) : 1);
 
 
@@ -89,7 +89,7 @@ namespace FFS
             Stopwatch w = Stopwatch.StartNew();
 
             DirectorySearcher searcher = new DirectorySearcher(
-                mode: mode,
+                searcher: mode,
                 multithreaded: true,
                 filterOnFileExtension: true,
                 filterOnFirstBytes: true

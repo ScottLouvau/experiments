@@ -8,30 +8,27 @@ namespace FastTextSearch.Test
 {
     public class FileSearcherTests : TestBase
     {
-        private Func<string, IFileSearcher> Utf8 = (value) => new Utf8Searcher(value);
-        private Func<string, IFileSearcher> DotNet = (value) => new DotNetSearcher(value);
-
         [Fact]
         public void Utf8Searcher_Basics()
         {
-            FileSearcher_Basics(Utf8);
+            FileSearcher_Basics(FileSearcher.Utf8);
         }
 
         [Fact]
         public void DotNetSearcher_Basics()
         {
-            FileSearcher_Basics(DotNet);
+            FileSearcher_Basics(FileSearcher.DotNet);
         }
 
-        [Fact]
-        public void SearcherAdhocDebugging()
-        {
-            string matches = AllMatches("Convert", @"C:\Code\bion\csharp\ScaleDemo\Region2.cs", Utf8);
+        //[Fact]
+        //public void SearcherAdhocDebugging()
+        //{
+        //    string matches = AllMatches("Convert", @"C:\Code\bion\csharp\ScaleDemo\Region2.cs", FileSearcher.Utf8);
+            
+        //    // No Asserts. Replace with a sample case and set breakpoint to debug issues encountered.
+        //}
 
-            // No Asserts. Replace with a sample case and set breakpoint to debug issues encountered.
-        }
-
-        private void FileSearcher_Basics(Func<string, IFileSearcher> searcher)
+        private void FileSearcher_Basics(FileSearcher searcher)
         {
             string helloWorld = Path.Combine(ContentFolderPath, "HelloWorld.cs");
 
@@ -67,9 +64,9 @@ namespace FastTextSearch.Test
             Assert.Equal("(2890, 146)", AllMatches("1329455026", Path.Combine(ContentFolderPath, "Sample.csv"), searcher));
         }
 
-        private string AllMatches(string valueToFind, string filePath, Func<string, IFileSearcher> buildSearcher)
+        private string AllMatches(string valueToFind, string filePath, FileSearcher searcher)
         {
-            List<FilePosition> matches = buildSearcher(valueToFind).Search(filePath);
+            List<FilePosition> matches = FileSearcherFactory.Build(valueToFind, searcher: searcher).Search(filePath);
             return (matches == null ? "" : string.Join("; ", matches.Select(m => m.LineAndChar)));
         }
     }

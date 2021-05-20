@@ -11,39 +11,27 @@ namespace FastTextSearch
         List<FilePosition> Search(string filePath);
     }
 
-    public class ReferenceSearcher : IFileSearcher
+    public enum FileSearcher
     {
-        public string ValueToFind { get; }
+        Utf8,
+        DotNet,
+    }
 
-        public ReferenceSearcher(string valueToFind)
+    public static class FileSearcherFactory
+    {
+        public static IFileSearcher Build(string valueToFind, bool scanFilePrefix = true, FileSearcher searcher = FileSearcher.Utf8)
         {
-            ValueToFind = valueToFind;
-        }
-
-        public List<FilePosition> Search(string filePath)
-        {
-            List<FilePosition> matches = null;
-
-            string contents = null;
-            using (StreamReader reader = File.OpenText(filePath))
+            switch (searcher)
             {
-                contents = reader.ReadToEnd();
+                case FileSearcher.Utf8:
+                    return new Utf8Searcher(valueToFind, scanFilePrefix);
+
+                case FileSearcher.DotNet:
+                    return new DotNetSearcher(valueToFind, scanFilePrefix);
+
+                default:
+                    throw new NotImplementedException($"FileSearcher {searcher} unknown.");
             }
-
-            int startIndex = 0;
-
-            while (true)
-            {
-                int matchIndex = contents.IndexOf(this.ValueToFind, startIndex, StringComparison.Ordinal);
-                if (matchIndex == -1) { break; }
-
-                matches ??= new List<FilePosition>();
-                matches.Add(new FilePosition() { FilePath = filePath, CharOffset = startIndex + matchIndex });
-
-                startIndex = matchIndex + 1;
-            }
-
-            return matches;
         }
     }
 
