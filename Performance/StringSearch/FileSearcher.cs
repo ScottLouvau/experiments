@@ -115,7 +115,7 @@ namespace StringSearch
         private bool ScanFilePrefix { get; }
         private IFileSearcher Fallback { get; }
 
-        public Utf8Searcher(string valueToFind, bool scanFilePrefix)
+        public Utf8Searcher(string valueToFind, bool scanFilePrefix = true)
         {
             ValueToFind = Encoding.UTF8.GetBytes(valueToFind);
             ScanFilePrefix = scanFilePrefix;
@@ -171,7 +171,7 @@ namespace StringSearch
                             int matchIndex = content.Slice(startIndex).IndexOf(ValueToFind);
                             if (matchIndex == -1) { break; }
 
-                            current = FilePosition.Update(current, content.Slice(startIndex, matchIndex));
+                            current = FilePosition.Update(current, content.Slice(0, startIndex + matchIndex));
                             matches ??= new List<FilePosition>();
                             matches.Add(current);
 
