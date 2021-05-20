@@ -17,6 +17,22 @@ namespace FastTextSearch
         DotNet,
     }
 
+    internal static class Settings
+    {
+        // Bytes to load in first file read.
+        // 64 KB is as fast to read as 1 KB, but reads >99% of text files fully in one read.
+        public const int FirstBlockSizeBytes = 64 * 1024;
+
+        // Bytes to sniff to identify file type.
+        // >99% of non-UTF8 files can be identified within the first 1 KB.
+        // Sniffing avoids reading ~90% of the total file bytes in the.
+        public const int SniffBytes = 1024;
+
+        // Bytes to read per iteration after the first.
+        // 512 KB resulted in the highest overall search bandwidth while minimizing per-thread RAM use.
+        public const int BlockSizeBytes = 512 * 1024;
+    }
+
     public static class FileSearcherFactory
     {
         public static IFileSearcher Build(FileSearcher searcher, string valueToFind, bool scanFilePrefix = true)
@@ -85,14 +101,14 @@ namespace FastTextSearch
 
         private bool IsNotUnicode(Stream stream)
         {
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(FileTypeSniffer.RecommendedSniffBytes);
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(Settings.SniffBytes);
 
             try
             {
                 int bytesRead = stream.Read(buffer);
                 stream.Seek(0, SeekOrigin.Begin);
 
-                FileSniffResult result = FileTypeSniffer.Sniff(buffer.AsSpan().Slice(0, bytesRead));
+                FileSniffResult result = FileSniffer.Sniff(buffer.AsSpan().Slice(0, bytesRead));
                 return (result.Type != FileTypeDetected.UTF8 && result.Type != FileTypeDetected.UnicodeOther);
             }
             finally
@@ -104,9 +120,6 @@ namespace FastTextSearch
 
     public class Utf8Searcher : IFileSearcher
     {
-        private const int BlockSizeBytes = 512 * 1024;
-        private const int FirstBlockSizeBytes = 64 * 1024;
-
         private byte[] ValueToFind { get; }
         private bool ScanFilePrefix { get; }
         private IFileSearcher Fallback { get; }
@@ -121,7 +134,7 @@ namespace FastTextSearch
         public List<FilePosition> Search(string filePath)
         {
             List<FilePosition> matches = null;
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(BlockSizeBytes);
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(Settings.BlockSizeBytes);
 
             try
             {
@@ -131,7 +144,7 @@ namespace FastTextSearch
                     long totalFileBytes = stream.Length - stream.Position;
 
                     // Read the first block
-                    int bytesRead = stream.Read(buffer.AsSpan().Slice(0, FirstBlockSizeBytes));
+                    int bytesRead = stream.Read(buffer.AsSpan().Slice(0, Settings.FirstBlockSizeBytes));
                     totalBytesRead += bytesRead;
                     Span<byte> content = buffer.AsSpan().Slice(0, bytesRead);
                     FilePosition current = FilePosition.Start(filePath);
@@ -139,7 +152,7 @@ namespace FastTextSearch
                     // Sniff the file; fall back for UTF-16/32 and stop with no matches for non-UTF-8
                     if (ScanFilePrefix)
                     {
-                        FileSniffResult result = FileTypeSniffer.Sniff(content.Slice(0, Math.Min(content.Length, FileTypeSniffer.RecommendedSniffBytes)));
+                        FileSniffResult result = FileSniffer.Sniff(content.Slice(0, Math.Min(content.Length, Settings.SniffBytes)));
                         if (result.Type == FileTypeDetected.UnicodeOther)
                         {
                             return Fallback.Search(filePath);

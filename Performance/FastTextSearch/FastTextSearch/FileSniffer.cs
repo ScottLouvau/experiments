@@ -26,9 +26,8 @@ namespace FastTextSearch
         }
     }
 
-    public class FileTypeSniffer
+    public class FileSniffer
     {
-        public const int RecommendedSniffBytes = 1024;
 
         /// <summary>
         ///  Identify tries to identify a file using the initial bytes.
