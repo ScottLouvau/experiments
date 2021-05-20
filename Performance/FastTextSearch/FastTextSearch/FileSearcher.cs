@@ -6,6 +6,7 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 
 namespace FastTextSearch
 {
@@ -43,6 +44,7 @@ namespace FastTextSearch
 
     public interface IFileSearcher
     {
+        long TotalBytesRead { get; }
         List<FilePosition> Search(Stream stream, string filePath);
     }
 
@@ -90,6 +92,9 @@ namespace FastTextSearch
     {
         public string ValueToFind { get; }
         private bool SniffFile { get; }
+
+        public long TotalBytesRead => _bytesRead;
+        private long _bytesRead = 0;
 
         public DotNetSearcher(string valueToFind, bool sniffFile = true)
         {
@@ -155,6 +160,7 @@ namespace FastTextSearch
                         content = buffer.AsSpan().Slice(0, content.Length + charsRead);
                     }
 
+                    Interlocked.Add(ref _bytesRead, totalFileBytes);
                     return matches;
                 }
             }
@@ -171,6 +177,7 @@ namespace FastTextSearch
             try
             {
                 int bytesRead = stream.Read(buffer);
+                Interlocked.Add(ref _bytesRead, bytesRead);
                 stream.Seek(0, SeekOrigin.Begin);
 
                 FileSniffResult result = FileSniffer.Sniff(buffer.AsSpan().Slice(0, bytesRead));
@@ -188,6 +195,9 @@ namespace FastTextSearch
         private byte[] ValueToFind { get; }
         private bool SniffFile { get; }
         private IFileSearcher Fallback { get; }
+
+        public long TotalBytesRead => _bytesRead + Fallback.TotalBytesRead;
+        private long _bytesRead = 0;
 
         public Utf8Searcher(string valueToFind, bool sniffFile = true)
         {
@@ -216,14 +226,21 @@ namespace FastTextSearch
                 if (SniffFile)
                 {
                     FileSniffResult result = FileSniffer.Sniff(content.Slice(0, Math.Min(content.Length, Settings.SniffBytes)));
-                    if (result.Type == FileTypeDetected.UnicodeOther)
+
+                    if (result.Type != FileTypeDetected.UTF8)
                     {
-                        stream.Seek(0, SeekOrigin.Begin);
-                        return Fallback.Search(stream, filePath);
-                    }
-                    else if (result.Type != FileTypeDetected.UTF8)
-                    {
-                        return null;
+                        Interlocked.Add(ref _bytesRead, totalBytesRead);
+
+                        if (result.Type == FileTypeDetected.UnicodeOther)
+                        {
+                            Interlocked.Add(ref _bytesRead, totalBytesRead);
+                            stream.Seek(0, SeekOrigin.Begin);
+                            return Fallback.Search(stream, filePath);
+                        }
+                        else
+                        {
+                            return null;
+                        }
                     }
 
                     // Skip BOM bytes, if detected
@@ -272,6 +289,7 @@ namespace FastTextSearch
                     content = buffer.AsSpan().Slice(0, content.Length + bytesRead);
                 }
 
+                Interlocked.Add(ref _bytesRead, totalBytesRead);
                 return matches;
             }
             finally

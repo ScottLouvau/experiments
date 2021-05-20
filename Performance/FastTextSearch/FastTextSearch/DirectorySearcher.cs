@@ -3,12 +3,12 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace FastTextSearch
 {
     // TODO:
-    //  - Files > 2 GB? (Want to search ranges, not full file)
     //  - Avoid/Reduce Match allocations?
     //  - Will Kirill want matches to a count limit or matches enumerator (for earlier first results?)
 
@@ -18,6 +18,14 @@ namespace FastTextSearch
         public bool Multithreaded { get; }
         public bool FilterOnFileExtension { get; }
         public bool SniffFile { get; }
+
+        public int FilesFound { get; private set; }
+        public int FilesSearched => _filesSearched;
+        private int _filesSearched;
+
+        public long TotalBytesRead { get; private set; }
+        public long TotalBytesToSearch => _totalBytesToSearch;
+        private long _totalBytesToSearch;
 
         public DirectorySearcher(FileSearcher searcher = FileSearcher.Utf8, bool multithreaded = true, bool filterOnFileExtension = true, bool sniffFile = true)
         {
@@ -46,22 +54,30 @@ namespace FastTextSearch
                 }
             }
 
+            FilesFound += filePaths.Length;
+            TotalBytesRead += fileSearcher.TotalBytesRead;
+
             return result;
         }
 
         private void SearchFile(string path, IFileSearcher fileSearcher, List<FilePosition> result)
         {
             if (FilterOnFileExtension && IsExcluded(path)) { return; }
+            Interlocked.Increment(ref _filesSearched);
 
             try
             {
-                List<FilePosition> fileMatches = fileSearcher.Search(File.OpenRead(path), path);
-
-                if (fileMatches != null)
+                using (Stream stream = File.OpenRead(path))
                 {
-                    lock (result)
+                    Interlocked.Add(ref _totalBytesToSearch, stream.Length);
+                    List<FilePosition> fileMatches = fileSearcher.Search(stream, path);
+
+                    if (fileMatches != null)
                     {
-                        result.AddRange(fileMatches);
+                        lock (result)
+                        {
+                            result.AddRange(fileMatches);
+                        }
                     }
                 }
             }

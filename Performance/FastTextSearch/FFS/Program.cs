@@ -52,6 +52,8 @@ namespace FFS
 
             w.Stop();
             Console.WriteLine($"Found {matches.Count:n0} matches in {w.Elapsed.TotalSeconds:n3} sec.");
+            Console.WriteLine($" Read {directorySearcher.FilesSearched:n0} of {directorySearcher.FilesFound:n0} files.");
+            Console.WriteLine($" Read {SizeString(directorySearcher.TotalBytesRead)} of {SizeString(directorySearcher.TotalBytesToSearch)}.");
 
             if (logMatchesToPath == null)
             {
@@ -74,6 +76,26 @@ namespace FFS
                 }
 
                 Console.WriteLine($"Sorted and logged to \"{logMatchesToPath}\".");
+            }
+        }
+
+        static string SizeString(long sizeInBytes)
+        {
+            if (sizeInBytes > 1024 * 1024 * 1024)
+            {
+                return $"{sizeInBytes / (double)(1024 * 1024 * 1024):n2} GB";
+            }
+            else if (sizeInBytes > 1024 * 1024)
+            {
+                return $"{sizeInBytes / (double)(1024 * 1024):n2} MB";
+            }
+            else if (sizeInBytes > 1024)
+            {
+                return $"{sizeInBytes / (double)(1024):n2} KB";
+            }
+            else
+            {
+                return $"{sizeInBytes:n0} bytes";
             }
         }
     }
