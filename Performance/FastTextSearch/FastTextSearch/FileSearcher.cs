@@ -97,35 +97,68 @@ namespace FastTextSearch
         public List<FilePosition> Search(Stream stream, string filePath)
         {
             List<FilePosition> matches = null;
-            ReadOnlySpan<char> contents = null;
+            char[] buffer = ArrayPool<char>.Shared.Rent(Settings.BlockSizeBytes);
 
-            if (SniffFile && IsNotUnicode(stream))
+            try
             {
-                return null;
-            }
+                using (StreamReader reader = new StreamReader(stream))
+                {
+                    long totalFileBytes = stream.Length - stream.Position;
 
-            using (StreamReader reader = new StreamReader(stream))
+                    if (SniffFile && IsNotUnicode(stream))
+                    {
+                        return null;
+                    }
+
+                    // Read the first block
+                    int charsRead = reader.Read(buffer.AsSpan().Slice(0, Settings.FirstBlockSizeBytes));
+                    ReadOnlySpan<char> content = buffer.AsSpan().Slice(0, charsRead);
+                    FilePosition current = FilePosition.Start(filePath);
+
+                    while (true)
+                    {
+                        int startIndex = 0;
+
+                        // Look for matches in the buffer
+                        while (true)
+                        {
+                            int matchIndex = content.Slice(startIndex).IndexOf(ValueToFind, StringComparison.Ordinal);
+                            if (matchIndex == -1) { break; }
+
+                            current = FilePosition.Update(current, content.Slice(0, startIndex + matchIndex));
+                            matches ??= new List<FilePosition>();
+                            matches.Add(current);
+
+                            content = content.Slice(startIndex + matchIndex);
+                            startIndex = 1;
+                        }
+
+                        // Stop if all bytes have been read
+                        if (stream.Position >= totalFileBytes) { break; }
+
+                        // Keep the last ValueToFind-1 bytes, in case a match was just off the end of the read buffer
+                        if (content.Length >= ValueToFind.Length)
+                        {
+                            int charsNotKept = (content.Length - (ValueToFind.Length - 1));
+                            current = FilePosition.Update(current, content.Slice(0, charsNotKept));
+                            content = content.Slice(charsNotKept);
+                        }
+
+                        // Copy unused bytes to buffer start
+                        content.CopyTo(buffer);
+
+                        // Read another block
+                        charsRead = reader.Read(buffer.AsSpan(content.Length));
+                        content = buffer.AsSpan().Slice(0, content.Length + charsRead);
+                    }
+
+                    return matches;
+                }
+            }
+            finally
             {
-                contents = reader.ReadToEnd();
+                ArrayPool<char>.Shared.Return(buffer);
             }
-
-            FilePosition current = FilePosition.Start(filePath);
-
-            while (true)
-            {
-                int matchIndex = contents.IndexOf(this.ValueToFind, StringComparison.Ordinal);
-                if (matchIndex == -1) { break; }
-
-                current = FilePosition.Update(current, contents.Slice(0, matchIndex));
-                matches ??= new List<FilePosition>();
-                matches.Add(current);
-
-                current.CharOffset++;
-                current.CharInLine++;
-                contents = contents.Slice(matchIndex + 1);
-            }
-
-            return matches;
         }
 
         private bool IsNotUnicode(Stream stream)
