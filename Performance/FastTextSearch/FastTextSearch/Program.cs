@@ -91,7 +91,7 @@ namespace FastTextSearch
                 searcher: mode,
                 multithreaded: true,
                 filterOnFileExtension: true,
-                filterOnFirstBytes: true
+                sniffFile: true
             );
 
             List<FilePosition> matches = null;

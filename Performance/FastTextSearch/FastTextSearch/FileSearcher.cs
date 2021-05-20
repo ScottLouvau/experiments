@@ -67,15 +67,15 @@ namespace FastTextSearch
 
     public static class FileSearcherFactory
     {
-        public static IFileSearcher Build(FileSearcher searcher, string valueToFind, bool scanFilePrefix = true)
+        public static IFileSearcher Build(FileSearcher searcher, string valueToFind, bool sniffFile = true)
         {
             switch (searcher)
             {
                 case FileSearcher.Utf8:
-                    return new Utf8Searcher(valueToFind, scanFilePrefix);
+                    return new Utf8Searcher(valueToFind, sniffFile);
 
                 case FileSearcher.DotNet:
-                    return new DotNetSearcher(valueToFind, scanFilePrefix);
+                    return new DotNetSearcher(valueToFind, sniffFile);
 
                 default:
                     throw new NotImplementedException($"FileSearcher {searcher} unknown.");
@@ -86,12 +86,12 @@ namespace FastTextSearch
     public class DotNetSearcher : IFileSearcher
     {
         public string ValueToFind { get; }
-        private bool ScanFilePrefix { get; }
+        private bool SniffFile { get; }
 
-        public DotNetSearcher(string valueToFind, bool scanFilePrefix = true)
+        public DotNetSearcher(string valueToFind, bool sniffFile = true)
         {
             ValueToFind = valueToFind;
-            ScanFilePrefix = scanFilePrefix;
+            SniffFile = sniffFile;
         }
 
         public List<FilePosition> Search(Stream stream, string filePath)
@@ -99,7 +99,7 @@ namespace FastTextSearch
             List<FilePosition> matches = null;
             ReadOnlySpan<char> contents = null;
 
-            if (ScanFilePrefix && IsNotUnicode(stream))
+            if (SniffFile && IsNotUnicode(stream))
             {
                 return null;
             }
@@ -150,14 +150,14 @@ namespace FastTextSearch
     public class Utf8Searcher : IFileSearcher
     {
         private byte[] ValueToFind { get; }
-        private bool ScanFilePrefix { get; }
+        private bool SniffFile { get; }
         private IFileSearcher Fallback { get; }
 
-        public Utf8Searcher(string valueToFind, bool scanFilePrefix = true)
+        public Utf8Searcher(string valueToFind, bool sniffFile = true)
         {
             ValueToFind = Encoding.UTF8.GetBytes(valueToFind);
-            ScanFilePrefix = scanFilePrefix;
-            Fallback = new DotNetSearcher(valueToFind, scanFilePrefix: false);
+            SniffFile = sniffFile;
+            Fallback = new DotNetSearcher(valueToFind, sniffFile: false);
         }
 
         public List<FilePosition> Search(Stream stream, string filePath)
@@ -177,7 +177,7 @@ namespace FastTextSearch
                 FilePosition current = FilePosition.Start(filePath);
 
                 // Sniff the file; fall back for UTF-16/32 and stop with no matches for non-UTF-8
-                if (ScanFilePrefix)
+                if (SniffFile)
                 {
                     FileSniffResult result = FileSniffer.Sniff(content.Slice(0, Math.Min(content.Length, Settings.SniffBytes)));
                     if (result.Type == FileTypeDetected.UnicodeOther)

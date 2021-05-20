@@ -14,19 +14,19 @@ namespace FastTextSearch
         public FileSearcher Searcher { get; }
         public bool Multithreaded { get; }
         public bool FilterOnFileExtension { get; }
-        public bool FilterOnFirstBytes { get; }
+        public bool SniffFile { get; }
 
-        public DirectorySearcher(FileSearcher searcher = FileSearcher.Utf8, bool multithreaded = true, bool filterOnFileExtension = true, bool filterOnFirstBytes = true)
+        public DirectorySearcher(FileSearcher searcher = FileSearcher.Utf8, bool multithreaded = true, bool filterOnFileExtension = true, bool sniffFile = true)
         {
             Searcher = searcher;
             Multithreaded = multithreaded;
             FilterOnFileExtension = filterOnFileExtension;
-            FilterOnFirstBytes = filterOnFirstBytes;
+            SniffFile = sniffFile;
         }
 
         public List<FilePosition> FindMatches(string valueToFind, string directoryToSearch, string searchPattern)
         {
-            IFileSearcher fileSearcher = FileSearcherFactory.Build(this.Searcher, valueToFind, this.FilterOnFirstBytes);
+            IFileSearcher fileSearcher = FileSearcherFactory.Build(this.Searcher, valueToFind, this.SniffFile);
 
             List<FilePosition> result = new List<FilePosition>();
             string[] filePaths = Directory.GetFiles(directoryToSearch, searchPattern, SearchOption.AllDirectories);
@@ -76,7 +76,7 @@ namespace FastTextSearch
 
         public List<FilePosition> FindMatches(string valueToFind, string filePath)
         {
-            return FileSearcherFactory.Build(this.Searcher, valueToFind, this.FilterOnFirstBytes).Search(File.OpenRead(filePath), filePath);
+            return FileSearcherFactory.Build(this.Searcher, valueToFind, this.SniffFile).Search(File.OpenRead(filePath), filePath);
         }
     }
 }

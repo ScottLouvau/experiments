@@ -37,7 +37,7 @@ namespace FFS
                 searcher: searcher,
                 multithreaded: true,
                 filterOnFileExtension: true,
-                filterOnFirstBytes: true
+                sniffFile: true
             );
 
             List<FilePosition> matches = null;
