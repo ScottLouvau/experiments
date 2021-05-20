@@ -67,7 +67,7 @@ namespace FastTextSearch
             current.CharOffset = 0;
 
             // Count lines to the end of the buffer
-            int newlines = Utf8.CountAndLastIndex((byte)'\n', content, out int lastNewlineIndex);
+            int newlines = Vector.CountAndLastIndex((byte)'\n', content, out int lastNewlineIndex);
             if (newlines > 0)
             {
                 current.LineNumber += newlines;

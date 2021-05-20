@@ -238,7 +238,7 @@ namespace FastTextSearch
                     // Look for matches in the buffer
                     while (true)
                     {
-                        int matchIndex = content.Slice(startIndex).IndexOf(ValueToFind);
+                        int matchIndex = Vector.IndexOf(ValueToFind, content.Slice(startIndex));
                         if (matchIndex == -1) { break; }
 
                         current = FilePosition.Update(current, content.Slice(0, startIndex + matchIndex));
