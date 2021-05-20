@@ -36,7 +36,7 @@ using System.Linq;
  *     - If match found, figure out line and character. 
  */
 
-namespace StringSearch
+namespace FastTextSearch
 {
     /// <summary>
     ///  Learnings:
@@ -67,8 +67,8 @@ namespace StringSearch
         {
             if (args.Length < 1)
             {
-                Console.WriteLine("Usage: StringSearch [valueToFind] [searchUnderPath?] [fileExtension?] [logMatchesToPath?]");
-                Console.WriteLine("   ex: StringSearch \"Console.WriteLine\" \"C:\\Code\" \"*.cs\" \"ConsoleLoggingClasses.log\"");
+                Console.WriteLine("Usage: FastTextSearch [valueToFind] [searchUnderPath?] [fileExtension?] [logMatchesToPath?]");
+                Console.WriteLine("   ex: FastTextSearch \"Console.WriteLine\" \"C:\\Code\" \"*.cs\" \"ConsoleLoggingClasses.log\"");
                 Console.WriteLine();
                 Console.WriteLine("  Finds 'valueToFind' in all text files ");
                 Console.WriteLine("  under [searchUnderPath] (or current directory)");

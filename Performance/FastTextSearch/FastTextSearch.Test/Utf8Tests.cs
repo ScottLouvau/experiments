@@ -3,7 +3,7 @@ using System.IO;
 using System.Text;
 using Xunit;
 
-namespace StringSearch.Test
+namespace FastTextSearch.Test
 {
     public class Utf8Tests : TestBase
     {

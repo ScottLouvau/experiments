@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 
-namespace StringSearch
+namespace FastTextSearch
 {
     public unsafe static class Vector
     {

@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using Xunit;
 
-namespace StringSearch.Test
+namespace FastTextSearch.Test
 {
     public class FileSearcherTests : TestBase
     {

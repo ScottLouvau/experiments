@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Text;
 using Xunit;
 
-namespace StringSearch.Test
+namespace FastTextSearch.Test
 {
     public class FileTypeSnifferTests : TestBase
     {

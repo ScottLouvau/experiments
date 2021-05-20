@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace StringSearch
+namespace FastTextSearch
 {
     public static class Utf8
     {

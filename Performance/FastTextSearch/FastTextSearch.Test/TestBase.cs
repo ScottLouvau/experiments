@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Reflection;
 
-namespace StringSearch.Test
+namespace FastTextSearch.Test
 {
     public class TestBase
     {

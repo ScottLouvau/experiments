@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text;
 
-namespace StringSearch
+namespace FastTextSearch
 {
     public struct FilePosition
     {
