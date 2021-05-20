@@ -17,7 +17,7 @@ namespace FFS
         {
             if (args.Length < 1)
             {
-                Console.WriteLine("Fast File Search, copyright Scott Louvau 2021.");
+                Console.WriteLine("Fast File Search by Scott Louvau, 2021.");
                 Console.WriteLine("Usage: FFS [valueToFind] [searchUnderPath?] [fileExtension?] [logMatchesToPath?]");
                 Console.WriteLine("   ex: FFS \"Console.WriteLine\" \"C:\\Code\" \"*.cs\" \"ConsoleLoggingClasses.log\"");
                 Console.WriteLine();
