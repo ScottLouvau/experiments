@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Xunit;
 
 namespace StringSearch.Test
@@ -34,6 +36,7 @@ namespace StringSearch.Test
             Assert.Equal("HelloWorld.cs (12, 34)", current.ToString());
             Assert.Equal(278, current.ByteOffset);
             Assert.Equal((byte)'"', text[277]);
+            Assert.Equal("[278b]", current.Offset);
 
             Assert.Null(Next('"', ref current, ref content));
 
@@ -76,6 +79,7 @@ namespace StringSearch.Test
             Assert.Equal("HelloWorld.cs (12, 34)", current.ToString());
             Assert.Equal(269, current.CharOffset);
             Assert.Equal('"', text[268]);
+            Assert.Equal("[269c]", current.Offset);
 
             Assert.Null(Next('"', ref current, ref content));
 
@@ -85,6 +89,22 @@ namespace StringSearch.Test
             Assert.Equal("(8, 1)", Next(' ', ref current, ref content)?.LineAndChar);
             Assert.Equal("(9, 48)", Next(';', ref current, ref content)?.LineAndChar);
             Assert.Equal("(9, 49)", Next('\r', ref current, ref content)?.LineAndChar);
+        }
+
+        [Fact]
+        public void FilePosition_Sort()
+        {
+            List<FilePosition> positions = new List<FilePosition> {
+                new FilePosition() { FilePath = "One.cs", LineNumber = 5, CharInLine = 9, ByteOffset = 50 },
+                new FilePosition() { FilePath = "One.cs", LineNumber = 5, CharInLine = 8, ByteOffset = 49 },
+                new FilePosition() { FilePath = "One.cs", LineNumber = 4, CharInLine = 50, ByteOffset = 48 },
+                new FilePosition() { FilePath = "Cat.cs", LineNumber = 10, CharInLine = 100, ByteOffset = 47 }
+            };
+
+            positions.Sort(FilePosition.FileLineCharOrder);
+
+            string order = string.Join(", ", positions.Select(pos => pos.ByteOffset));
+            Assert.Equal("47, 48, 49, 50", order);
         }
 
         private FilePosition? Next(char b, ref FilePosition current, ref Span<byte> content)

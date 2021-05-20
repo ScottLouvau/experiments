@@ -104,7 +104,7 @@ namespace StringSearch
         public bool IsExcluded(string filePath)
         {
             string extension = Path.GetExtension(filePath).ToLowerInvariant();
-            return (extension == "" || extension == ".dll" || extension == ".exe" || extension == ".pdb");
+            return (extension == "" || extension == ".dll" || extension == ".exe" || extension == ".pdb" || extension == ".v2");
         }
 
         public List<FilePosition> FindMatches(string valueToFind, string filePath)
