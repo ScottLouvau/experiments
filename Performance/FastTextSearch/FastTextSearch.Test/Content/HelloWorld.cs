@@ -1,7 +1,4 @@
-// Copyright (c) Scott Louvau. All rights reserved.
-// Licensed under the MIT License.
-
-using System;
+﻿using System;
 
 namespace HelloWorld
 {

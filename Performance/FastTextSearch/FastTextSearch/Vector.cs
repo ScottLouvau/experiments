@@ -23,6 +23,11 @@ namespace FastTextSearch
 
         public static int IndexOf(byte b, ReadOnlySpan<byte> content)
         {
+            if (Avx2.IsSupported == false)
+            {
+                return content.IndexOf(b);
+            }
+
             int i = 0;
             int fullBlockEnd = content.Length - 32;
 
@@ -65,6 +70,11 @@ namespace FastTextSearch
 
         public static int CountAndLastIndex(byte b, ReadOnlySpan<byte> content, out int lastIndex)
         {
+            if (Avx2.IsSupported == false)
+            {
+                return Utf8.CountAndLastIndex(b, content, out lastIndex);
+            }
+
             lastIndex = -1;
             int count = 0;
 
@@ -114,7 +124,7 @@ namespace FastTextSearch
 
         public static int IndexOf(ReadOnlySpan<byte> valueToFind, ReadOnlySpan<byte> content)
         {
-            if (valueToFind.Length < 3)
+            if (valueToFind.Length < 3 || Avx2.IsSupported == false)
             {
                 return content.IndexOf(valueToFind);
             }
