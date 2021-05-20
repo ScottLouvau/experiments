@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 
 namespace StringSearch
 {
@@ -72,6 +73,9 @@ namespace StringSearch
 
             // Count codepoints after the last newline
             current.CharInLine += Utf8.CodepointCount(content);
+
+            // [Alternative: Make CharInLine the exact .NET char count]
+            //current.CharInLine += Encoding.UTF8.GetCharCount(content);
 
             return current;
         }

@@ -85,14 +85,21 @@ namespace StringSearch
         {
             if (FilterOnFileExtension && IsExcluded(path)) { return; }
 
-            List<FilePosition> fileMatches = fileSearcher.Search(path);
-
-            if (fileMatches != null)
+            try
             {
-                lock (result)
+                List<FilePosition> fileMatches = fileSearcher.Search(path);
+
+                if (fileMatches != null)
                 {
-                    result.AddRange(fileMatches);
+                    lock (result)
+                    {
+                        result.AddRange(fileMatches);
+                    }
                 }
+            }
+            catch (IOException)
+            {
+                // Quietly ignore files we fail to read.
             }
         }
 

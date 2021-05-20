@@ -50,10 +50,12 @@ namespace StringSearch
     public class DotNetSearcher : IFileSearcher
     {
         public string ValueToFind { get; }
+        private bool ScanFilePrefix { get; }
 
-        public DotNetSearcher(string valueToFind)
+        public DotNetSearcher(string valueToFind, bool scanFilePrefix = true)
         {
             ValueToFind = valueToFind;
+            ScanFilePrefix = scanFilePrefix;
         }
 
         public List<FilePosition> Search(string filePath)
@@ -63,23 +65,11 @@ namespace StringSearch
 
             using (Stream stream = File.OpenRead(filePath))
             {
-                byte[] buffer = ArrayPool<byte>.Shared.Rent(FileTypeSniffer.RecommendedSniffBytes);
-                try
+                if (ScanFilePrefix && IsNotUnicode(stream))
                 {
-                    int bytesRead = stream.Read(buffer);
-
-                      FileSniffResult result = FileTypeSniffer.Sniff(buffer.AsSpan().Slice(0, bytesRead));
-                    if (result.Type != FileTypeDetected.UTF8 && result.Type != FileTypeDetected.UnicodeOther)
-                    {
-                        return null;
-                    }
-                }
-                finally
-                {
-                    ArrayPool<byte>.Shared.Return(buffer);
+                    return null;
                 }
 
-                stream.Seek(0, SeekOrigin.Begin);
                 using (StreamReader reader = new StreamReader(stream))
                 {
                     contents = reader.ReadToEnd();
@@ -104,6 +94,24 @@ namespace StringSearch
 
             return matches;
         }
+
+        private bool IsNotUnicode(Stream stream)
+        {
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(FileTypeSniffer.RecommendedSniffBytes);
+
+            try
+            {
+                int bytesRead = stream.Read(buffer);
+                stream.Seek(0, SeekOrigin.Begin);
+
+                FileSniffResult result = FileTypeSniffer.Sniff(buffer.AsSpan().Slice(0, bytesRead));
+                return (result.Type != FileTypeDetected.UTF8 && result.Type != FileTypeDetected.UnicodeOther);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
     }
 
     public class Utf8Searcher : IFileSearcher
@@ -119,7 +127,7 @@ namespace StringSearch
         {
             ValueToFind = Encoding.UTF8.GetBytes(valueToFind);
             ScanFilePrefix = scanFilePrefix;
-            Fallback = new DotNetSearcher(valueToFind);
+            Fallback = new DotNetSearcher(valueToFind, scanFilePrefix: false);
         }
 
         public List<FilePosition> Search(string filePath)
