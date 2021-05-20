@@ -1,6 +1,10 @@
-﻿using System;
+// Copyright (c) Scott Louvau. All rights reserved.
+// Licensed under the MIT License.
+
+using System;
 using System.IO;
 using System.Text;
+
 using Xunit;
 
 namespace FastTextSearch.Test

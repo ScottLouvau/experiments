@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+// Copyright (c) Scott Louvau. All rights reserved.
+// Licensed under the MIT License.
+
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 

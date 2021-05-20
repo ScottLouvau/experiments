@@ -1,9 +1,13 @@
-﻿using FastTextSearch;
+// Copyright (c) Scott Louvau. All rights reserved.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+
+using FastTextSearch;
 
 namespace FFS
 {
@@ -13,6 +17,7 @@ namespace FFS
         {
             if (args.Length < 1)
             {
+                Console.WriteLine("Fast File Search, copyright Scott Louvau 2021.");
                 Console.WriteLine("Usage: FFS [valueToFind] [searchUnderPath?] [fileExtension?] [logMatchesToPath?]");
                 Console.WriteLine("   ex: FFS \"Console.WriteLine\" \"C:\\Code\" \"*.cs\" \"ConsoleLoggingClasses.log\"");
                 Console.WriteLine();
@@ -28,7 +33,6 @@ namespace FFS
             string logMatchesToPath = (args.Length > 3 ? Path.GetFullPath(args[3]) : null);
             FileSearcher searcher = (args.Length > 4 ? Enum.Parse<FileSearcher>(args[4]) : FileSearcher.Utf8);
             int iterations = (args.Length > 5 ? int.Parse(args[5]) : 1);
-
 
             Console.WriteLine($"Searching for \"{valueToFind}\" with {searcher} in '{directoryToSearch}'{(iterations > 1 ? $" [{iterations:n0}x]" : "")}...");
             Stopwatch w = Stopwatch.StartNew();

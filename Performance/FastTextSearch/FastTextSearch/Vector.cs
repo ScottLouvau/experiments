@@ -1,4 +1,7 @@
-﻿using System;
+// Copyright (c) Scott Louvau. All rights reserved.
+// Licensed under the MIT License.
+
+using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
