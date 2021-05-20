@@ -8,14 +8,12 @@ namespace StringSearch
     public enum FileSearcherMode
     {
         Utf8,
-        Utf8Whole,
         DotNet,
-        DotNetUnpositioned,
+        Reference,
     }
 
     // TODO:
     //  - Files > 2 GB? (Want to search ranges, not full file)
-    //  - Not respecting FilterOnFirstBytes with Mode == DotNetDefault
     //  - Avoid/Reduce Match allocations?
     //  - Will Kirill want matches to a count limit or matches enumerator (for earlier first results?)
 
@@ -40,16 +38,16 @@ namespace StringSearch
 
             switch (this.Mode)
             {
+                case FileSearcherMode.Utf8:
+                    fileSearcher = new Utf8Searcher(valueToFind, FilterOnFirstBytes);
+                    break;
+
                 case FileSearcherMode.DotNet:
                     fileSearcher = new DotNetSearcher(valueToFind);
                     break;
 
-                case FileSearcherMode.DotNetUnpositioned:
-                    fileSearcher = new DotNetBasicSearcher(valueToFind);
-                    break;
-
-                case FileSearcherMode.Utf8:
-                    fileSearcher = new Utf8Searcher(valueToFind, FilterOnFirstBytes);
+                case FileSearcherMode.Reference:
+                    fileSearcher = new ReferenceSearcher(valueToFind);
                     break;
 
                 default:

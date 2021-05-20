@@ -9,11 +9,18 @@ namespace StringSearch.Test
     public class FileSearcherTests : TestBase
     {
         private Func<string, IFileSearcher> Utf8 = (value) => new Utf8Searcher(value);
+        private Func<string, IFileSearcher> DotNet = (value) => new DotNetSearcher(value);
 
         [Fact]
         public void Utf8Searcher_Basics()
         {
             FileSearcher_Basics(Utf8);
+        }
+
+        [Fact]
+        public void DotNetSearcher_Basics()
+        {
+            FileSearcher_Basics(DotNet);
         }
 
         [Fact]
@@ -28,10 +35,14 @@ namespace StringSearch.Test
         {
             string sampleFilePath = Path.Combine(ContentFolderPath, "HelloWorld.cs");
 
-            // Quote in HelloWorld: Multiple matches, matches on same line.
+            // Quote in HelloWorld.cs: Multiple matches, matches on same line.
             // Checks that FilePosition updating doesn't have off-by-ones in CharInLine counting.
             string matches = AllMatches("\"", sampleFilePath, buildSearcher);
             Assert.Equal("(9, 31); (9, 46); (10, 31); (10, 33); (11, 31); (11, 33); (12, 31); (12, 33)", matches);
+
+            // 'HelloWorld' in HelloWorld.cs
+            matches = AllMatches("HelloWorld", sampleFilePath, buildSearcher);
+            Assert.Equal("(3, 11); (5, 11)", matches);
         }
 
         private string AllMatches(string valueToFind, string filePath, Func<string, IFileSearcher> buildSearcher)

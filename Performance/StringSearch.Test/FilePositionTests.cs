@@ -71,9 +71,9 @@ namespace StringSearch.Test
 
             // 👍 is one codepoint but two .NET UTF-16 chars
             // [Reported as (12, 34) in Visual Studio 2019, but (12, 33) in VS Code]
-            Assert.Equal("(12, 34)", Next('"', ref current, ref content)?.LineAndChar);
+            Assert.Equal("(12, 33)", Next('"', ref current, ref content)?.LineAndChar);
 
-            Assert.Equal("HelloWorld.cs (12, 35)", current.ToString());
+            Assert.Equal("HelloWorld.cs (12, 34)", current.ToString());
             Assert.Equal(269, current.CharOffset);
             Assert.Equal('"', text[268]);
 

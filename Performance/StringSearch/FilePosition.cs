@@ -50,7 +50,11 @@ namespace StringSearch
                 content = content.Slice(lastNewlineIndex + 1);
             }
 
-            current.CharInLine += content.Length;
+            // Count codepoints after the last newline
+            current.CharInLine += Utf8.CodepointCount(content);
+
+            // [Alternative: Count .NET chars after the last newline]
+            //current.CharInLine += content.Length;
 
             return current;
         }
@@ -74,7 +78,7 @@ namespace StringSearch
             // Count codepoints after the last newline
             current.CharInLine += Utf8.CodepointCount(content);
 
-            // [Alternative: Make CharInLine the exact .NET char count]
+            // [Alternative: Count .NET chars after the last newline
             //current.CharInLine += Encoding.UTF8.GetCharCount(content);
 
             return current;

@@ -11,11 +11,11 @@ namespace StringSearch
         List<FilePosition> Search(string filePath);
     }
 
-    public class DotNetBasicSearcher : IFileSearcher
+    public class ReferenceSearcher : IFileSearcher
     {
         public string ValueToFind { get; }
 
-        public DotNetBasicSearcher(string valueToFind)
+        public ReferenceSearcher(string valueToFind)
         {
             ValueToFind = valueToFind;
         }

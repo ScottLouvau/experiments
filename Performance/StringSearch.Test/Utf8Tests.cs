@@ -76,7 +76,7 @@ namespace StringSearch.Test
         [Fact]
         public void Utf8_Codepoints()
         {
-            Assert.Equal(0, Utf8.CodepointCount(null));
+            Assert.Equal(0, Utf8.CodepointCount((Span<byte>)null));
             Assert.Equal(0, Utf8.CodepointCount(new byte[0]));
 
             Assert.Equal(5, Utf8.CodepointCount(Encoding.UTF8.GetBytes("Hello")));

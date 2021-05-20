@@ -73,6 +73,30 @@ namespace StringSearch
         }
 
         /// <summary>
+        ///  Returns the number of codepoints in a set of UTF-16 chars.
+        ///  A codepoint may be one or two chars.
+        ///  Codepoints don't always correspond to separate visual glyphs.
+        /// </summary>
+        /// <param name="content">UTF-16 chars in which to count codepoints</param>
+        /// <returns>Number of codepoints in content span</returns>
+        public static int CodepointCount(ReadOnlySpan<char> content)
+        {
+            if (content == null) { return 0; }
+
+            int continuations = 0;
+
+            for (int i = 0; i < content.Length; ++i)
+            {
+                if (char.IsHighSurrogate(content[i]))
+                {
+                    continuations++;
+                }
+            }
+
+            return content.Length - continuations;
+        }
+
+        /// <summary>
         ///  Return the number of occurrences of a byte in the sequence,
         ///  and the index of the last one found.
         /// </summary>
