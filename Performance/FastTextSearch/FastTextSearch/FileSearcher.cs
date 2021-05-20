@@ -40,7 +40,7 @@ namespace FastTextSearch
 
     public interface IFileSearcher
     {
-        List<FilePosition> Search(string filePath);
+        List<FilePosition> Search(Stream stream, string filePath);
     }
 
     public enum FileSearcher
@@ -94,22 +94,19 @@ namespace FastTextSearch
             ScanFilePrefix = scanFilePrefix;
         }
 
-        public List<FilePosition> Search(string filePath)
+        public List<FilePosition> Search(Stream stream, string filePath)
         {
             List<FilePosition> matches = null;
             ReadOnlySpan<char> contents = null;
 
-            using (Stream stream = File.OpenRead(filePath))
+            if (ScanFilePrefix && IsNotUnicode(stream))
             {
-                if (ScanFilePrefix && IsNotUnicode(stream))
-                {
-                    return null;
-                }
+                return null;
+            }
 
-                using (StreamReader reader = new StreamReader(stream))
-                {
-                    contents = reader.ReadToEnd();
-                }
+            using (StreamReader reader = new StreamReader(stream))
+            {
+                contents = reader.ReadToEnd();
             }
 
             FilePosition current = FilePosition.Start(filePath);
@@ -163,85 +160,83 @@ namespace FastTextSearch
             Fallback = new DotNetSearcher(valueToFind, scanFilePrefix: false);
         }
 
-        public List<FilePosition> Search(string filePath)
+        public List<FilePosition> Search(Stream stream, string filePath)
         {
             List<FilePosition> matches = null;
             byte[] buffer = ArrayPool<byte>.Shared.Rent(Settings.BlockSizeBytes);
 
             try
             {
-                using (Stream stream = File.OpenRead(filePath))
+                long totalBytesRead = 0;
+                long totalFileBytes = stream.Length - stream.Position;
+
+                // Read the first block
+                int bytesRead = stream.Read(buffer.AsSpan().Slice(0, Settings.FirstBlockSizeBytes));
+                totalBytesRead += bytesRead;
+                Span<byte> content = buffer.AsSpan().Slice(0, bytesRead);
+                FilePosition current = FilePosition.Start(filePath);
+
+                // Sniff the file; fall back for UTF-16/32 and stop with no matches for non-UTF-8
+                if (ScanFilePrefix)
                 {
-                    long totalBytesRead = 0;
-                    long totalFileBytes = stream.Length - stream.Position;
-
-                    // Read the first block
-                    int bytesRead = stream.Read(buffer.AsSpan().Slice(0, Settings.FirstBlockSizeBytes));
-                    totalBytesRead += bytesRead;
-                    Span<byte> content = buffer.AsSpan().Slice(0, bytesRead);
-                    FilePosition current = FilePosition.Start(filePath);
-
-                    // Sniff the file; fall back for UTF-16/32 and stop with no matches for non-UTF-8
-                    if (ScanFilePrefix)
+                    FileSniffResult result = FileSniffer.Sniff(content.Slice(0, Math.Min(content.Length, Settings.SniffBytes)));
+                    if (result.Type == FileTypeDetected.UnicodeOther)
                     {
-                        FileSniffResult result = FileSniffer.Sniff(content.Slice(0, Math.Min(content.Length, Settings.SniffBytes)));
-                        if (result.Type == FileTypeDetected.UnicodeOther)
-                        {
-                            return Fallback.Search(filePath);
-                        }
-                        else if (result.Type != FileTypeDetected.UTF8)
-                        {
-                            return null;
-                        }
-
-                        // Skip BOM bytes, if detected
-                        if (result.BomFound)
-                        {
-                            current.ByteOffset += result.BomByteCount;
-                            content = content.Slice(result.BomByteCount);
-                        }
+                        stream.Seek(0, SeekOrigin.Begin);
+                        return Fallback.Search(stream, filePath);
+                    }
+                    else if (result.Type != FileTypeDetected.UTF8)
+                    {
+                        return null;
                     }
 
+                    // Skip BOM bytes, if detected
+                    if (result.BomFound)
+                    {
+                        current.ByteOffset += result.BomByteCount;
+                        content = content.Slice(result.BomByteCount);
+                    }
+                }
+
+                while (true)
+                {
+                    int startIndex = 0;
+
+                    // Look for matches in the buffer
                     while (true)
                     {
-                        int startIndex = 0;
+                        int matchIndex = content.Slice(startIndex).IndexOf(ValueToFind);
+                        if (matchIndex == -1) { break; }
 
-                        // Look for matches in the buffer
-                        while (true)
-                        {
-                            int matchIndex = content.Slice(startIndex).IndexOf(ValueToFind);
-                            if (matchIndex == -1) { break; }
+                        current = FilePosition.Update(current, content.Slice(0, startIndex + matchIndex));
+                        matches ??= new List<FilePosition>();
+                        matches.Add(current);
 
-                            current = FilePosition.Update(current, content.Slice(0, startIndex + matchIndex));
-                            matches ??= new List<FilePosition>();
-                            matches.Add(current);
-
-                            content = content.Slice(startIndex + matchIndex);
-                            startIndex = 1;
-                        }
-
-                        // Stop if all bytes have been read
-                        if (totalBytesRead >= totalFileBytes) { break; }
-
-                        // Keep the last ValueToFind-1 bytes, in case a match was just off the end of the read buffer
-                        if (content.Length >= ValueToFind.Length)
-                        {
-                            int bytesNotKept = (content.Length - (ValueToFind.Length - 1));
-                            current = FilePosition.Update(current, content.Slice(0, bytesNotKept));
-                            content = content.Slice(bytesNotKept);
-                        }
-
-                        // Copy unused bytes to buffer start
-                        content.CopyTo(buffer);
-
-                        // Read another block
-                        bytesRead = stream.Read(buffer.AsSpan(content.Length));
-                        totalBytesRead += bytesRead;
-                        content = buffer.AsSpan().Slice(0, content.Length + bytesRead);
+                        content = content.Slice(startIndex + matchIndex);
+                        startIndex = 1;
                     }
 
-                    return matches;
+                    // Stop if all bytes have been read
+                    if (totalBytesRead >= totalFileBytes) { break; }
+
+                    // Keep the last ValueToFind-1 bytes, in case a match was just off the end of the read buffer
+                    if (content.Length >= ValueToFind.Length)
+                    {
+                        int bytesNotKept = (content.Length - (ValueToFind.Length - 1));
+                        current = FilePosition.Update(current, content.Slice(0, bytesNotKept));
+                        content = content.Slice(bytesNotKept);
+                    }
+
+                    // Copy unused bytes to buffer start
+                    content.CopyTo(buffer);
+
+                    // Read another block
+                    bytesRead = stream.Read(buffer.AsSpan(content.Length));
+                    totalBytesRead += bytesRead;
+                    content = buffer.AsSpan().Slice(0, content.Length + bytesRead);
                 }
+
+                return matches;
             }
             finally
             {

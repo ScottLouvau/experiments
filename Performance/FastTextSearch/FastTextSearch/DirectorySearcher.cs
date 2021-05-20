@@ -52,7 +52,7 @@ namespace FastTextSearch
 
             try
             {
-                List<FilePosition> fileMatches = fileSearcher.Search(path);
+                List<FilePosition> fileMatches = fileSearcher.Search(File.OpenRead(path), path);
 
                 if (fileMatches != null)
                 {
@@ -76,7 +76,7 @@ namespace FastTextSearch
 
         public List<FilePosition> FindMatches(string valueToFind, string filePath)
         {
-            return FileSearcherFactory.Build(this.Searcher, valueToFind, this.FilterOnFirstBytes).Search(filePath);
+            return FileSearcherFactory.Build(this.Searcher, valueToFind, this.FilterOnFirstBytes).Search(File.OpenRead(filePath), filePath);
         }
     }
 }
