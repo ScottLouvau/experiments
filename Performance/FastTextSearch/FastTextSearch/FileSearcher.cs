@@ -6,6 +6,38 @@ using System.Text;
 
 namespace FastTextSearch
 {
+    /* Goals:
+     *   - Very fast compared to Parallel File.ReadAllText and string.IndexOf.
+     *   - Constrain memory use (1 MB / core or less).
+     *   - Minimize unused bytes read (identify binaries with prefix read only).
+     *   - Minimize disk read count (read most useful files in one read, and nearly all in few more)
+     *   - Identify text that's non-UTF8 and fall back
+     *   - Find line, charInLine, and context string efficiently (line with match with <= 100 chars before and after)
+     */
+
+    /* Design:
+     *   - Skip file extensions: "" | ".dll" | ".exe"
+     *     - Avoids 33% of files (mostly git object files with no extension)
+     *   
+     *   - Load 64 KB first.
+     *     - Same time cost as 1 KB.
+     *     - 99.5% of my text files are still just one read.
+     *   
+     *   - Classify text by first 1 KB.
+     *     - Can skip ~90% of bytes in folder classifying the first 1 KB.
+     *     - About 1/3 of my UTF-8 has a BOM.
+     *     - UTF-16/32 identified by BOM. (It looks like FileStream does only this)
+     *     - Common, large non-text files are quickly skipped (zip, zlib, exe, dll, png, jpg)
+     *     - 99% of my invalid UTF-8 are found by byte pairs (continuation after single byte, continuation missing after multi-byte)
+     *       - 4,142 filtered checking continuation bytes fully in first 32 KB.
+     *       - 4,141 filtered checking byte pairs only.
+     *       - 4,133 filtered checking byte pairs in first 1 KB only.
+     *
+     *   - Search for matches in 512 KB blocks.
+     *     - If no match in first block, nothing else to do.
+     *     - If match found, figure out line and character. 
+     */
+
     public interface IFileSearcher
     {
         List<FilePosition> Search(string filePath);
