@@ -16,6 +16,9 @@ namespace FastTextSearch
          *  - AVX2 is implemented in Intel CPUs since Haswell (2013) and AMD CPUs since Excavator (2015)
          *  - AVX2 byte operations treat each byte as a signed value from -128 (0x80) to 127 (0x7F).
          *  
+         *  - AVX2 byte operations produce a vector output, with all zero byte for false and an all one byte (-1) for true.
+         *  - Use Avx2.MoveMask to turn this set of bytes into a set of bits. The lowest bit corresponds to the first input byte.
+         *  
          *  - UTF-8 continuation bytes are 0x80 - 0xBF, so all signed bytes > 0xBF are codepoint start bytes.
          */
 
@@ -43,31 +46,38 @@ namespace FastTextSearch
             int i = 0;
             int fullBlockEnd = content.Length - 31;
 
-            if (i < fullBlockEnd)
+            fixed (byte* contentPtr = &content[0])
             {
-                fixed (byte* contentPtr = &content[0])
+                Vector256<sbyte> continuations = SetVector256To(BiggestContinuation);
+
+                // Count full blocks
+                for (; i < fullBlockEnd; i += 32)
                 {
-                    Vector256<sbyte> continuations = SetVector256To(BiggestContinuation);
+                    // Load a vector of bytes
+                    Vector256<sbyte> contentV = Unsafe.ReadUnaligned<Vector256<sbyte>>(&contentPtr[i]);
 
-                    for (; i < fullBlockEnd; i += 32)
-                    {
-                        // Load a vector of bytes
-                        Vector256<sbyte> contentV = Unsafe.ReadUnaligned<Vector256<sbyte>>(&contentPtr[i]);
-
-                        // Count codepoint start bytes
-                        Vector256<sbyte> starts = Avx2.CompareGreaterThan(contentV, continuations);
-                        uint startBits = unchecked((uint)Avx2.MoveMask(starts));
-                        count += (int)Popcnt.PopCount(startBits);
-                    }
+                    // Count codepoint start bytes
+                    Vector256<sbyte> starts = Avx2.CompareGreaterThan(contentV, continuations);
+                    uint startBits = unchecked((uint)Avx2.MoveMask(starts));
+                    count += (int)Popcnt.PopCount(startBits);
                 }
-            }
 
-            // Search the last partial block
-            for (; i < content.Length; ++i)
-            {
-                if (content[i] < 0x80 || content[i] > 0xBF)
+                // Count the last partial block
+                if (i < content.Length)
                 {
-                    count++;
+                    // Load the last 32 bytes (including some previously counted)
+                    Vector256<sbyte> contentV = Unsafe.ReadUnaligned<Vector256<sbyte>>(&contentPtr[content.Length - 32]);
+
+                    // Count codepoint start bytes
+                    Vector256<sbyte> starts = Avx2.CompareGreaterThan(contentV, continuations);
+                    uint startBits = unchecked((uint)Avx2.MoveMask(starts));
+
+                    // Screen away bytes counted in the prior loop (the low bits).
+                    int bitsToInclude = (content.Length - i);
+                    startBits = startBits >> (32 - bitsToInclude);
+
+                    // Add the last set of starting bytes
+                    count += (int)Popcnt.PopCount(startBits);
                 }
             }
 

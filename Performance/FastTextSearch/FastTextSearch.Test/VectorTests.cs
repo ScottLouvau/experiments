@@ -17,13 +17,17 @@ namespace FastTextSearch.Test
             Assert.Equal(0, Vector.CodepointCount((Span<byte>)null));
             Assert.Equal(0, Vector.CodepointCount(new byte[0]));
 
-            // After-block count
+            // Partial-block fallback
             Assert.Equal(5, Vector.CodepointCount(Encoding.UTF8.GetBytes("Hello")));
             Assert.Equal(4, Vector.CodepointCount(Encoding.UTF8.GetBytes("©λ⅔👍")));
+            Assert.Equal(30, Vector.CodepointCount(Encoding.UTF8.GetBytes("123456789012345678901234567890")));
 
             // In-block count
-            Assert.Equal(32, Vector.CodepointCount(Encoding.UTF8.GetBytes("01234567890123456789012345678901")));
+            Assert.Equal(32, Vector.CodepointCount(Encoding.UTF8.GetBytes("12345678901234567890123456789012")));
+            Assert.Equal(34, Vector.CodepointCount(Encoding.UTF8.GetBytes("1234567890123456789012345678901234")));
             Assert.Equal(12, Vector.CodepointCount(Encoding.UTF8.GetBytes("👍👍👍👍👍👍👍👍👍👍👍👍")));
+            Assert.Equal(16, Vector.CodepointCount(Encoding.UTF8.GetBytes("👍👍👍👍👍👍👍👍👍👍👍👍AAAA")));
+            Assert.Equal(16, Vector.CodepointCount(Encoding.UTF8.GetBytes("©λ⅔👍©λ⅔👍©λ⅔👍©λ⅔👍")));
         }
 
         [Fact]
