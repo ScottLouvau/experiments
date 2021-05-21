@@ -10,6 +10,17 @@ namespace FastTextSearch
 {
     public unsafe static class Vector
     {
+        /* Vector Operation Notes
+         * ======================
+         *  - These operations use AVX2 with 256-bit vector registers.
+         *  - AVX2 is implemented in Intel CPUs since Haswell (2013) and AMD CPUs since Excavator (2015)
+         *  - AVX2 byte operations treat each byte as a signed value from -128 (0x80) to 127 (0x7F).
+         *  
+         *  - UTF-8 continuation bytes are 0x80 - 0xBF, so all signed bytes > 0xBF are codepoint start bytes.
+         */
+
+        private const byte BiggestContinuation = 0xBF;
+
         private static Vector256<sbyte> SetVector256To(byte value)
         {
             sbyte* _loader = stackalloc sbyte[32];
@@ -23,14 +34,9 @@ namespace FastTextSearch
 
         public static int CodepointCount(ReadOnlySpan<byte> content)
         {
-            if (Avx2.IsSupported == false)
+            if (Avx2.IsSupported == false || content.Length < 32)
             {
                 return Utf8.CodepointCount(content);
-            }
-
-            if (content == null)
-            {
-                return 0;
             }
 
             int count = 0;
@@ -41,17 +47,15 @@ namespace FastTextSearch
             {
                 fixed (byte* contentPtr = &content[0])
                 {
-                    Vector256<sbyte> cutoff = SetVector256To(0xBF);
+                    Vector256<sbyte> continuations = SetVector256To(BiggestContinuation);
 
                     for (; i < fullBlockEnd; i += 32)
                     {
                         // Load a vector of bytes
                         Vector256<sbyte> contentV = Unsafe.ReadUnaligned<Vector256<sbyte>>(&contentPtr[i]);
 
-                        // Look for bytes not between 0x80 and 0xBF.
-                        // This is a signed byte (sbyte) operation, so 0x80 is -128 and 0xBF = -64.
-                        // GreaterThan 0xBF means 0xC0-0xFF and 0x00 - 0x7F.
-                        Vector256<sbyte> starts = Avx2.CompareGreaterThan(contentV, cutoff);
+                        // Count codepoint start bytes
+                        Vector256<sbyte> starts = Avx2.CompareGreaterThan(contentV, continuations);
                         uint startBits = unchecked((uint)Avx2.MoveMask(starts));
                         count += (int)Popcnt.PopCount(startBits);
                     }
