@@ -84,6 +84,97 @@ namespace FastTextSearch
             return count;
         }
 
+        public static FilePosition FilePositionUpdate(FilePosition start, ReadOnlySpan<byte> content)
+        {
+            if (Avx2.IsSupported == false || content.Length < 32)
+            {
+                return FilePosition.Update(start, content);
+            }
+
+            FilePosition current = start;
+            current.ByteOffset += content.Length;
+
+            int i = 0;
+            int fullBlockEnd = content.Length - 31;
+
+            fixed (byte* contentPtr = &content[0])
+            {
+                Vector256<sbyte> newlineV = SetVector256To((byte)'\n');
+                Vector256<sbyte> continuations = SetVector256To(BiggestContinuation);
+
+                // Count full blocks
+                for (; i < fullBlockEnd; i += 32)
+                {
+                    // Load a vector of bytes
+                    Vector256<sbyte> contentV = Unsafe.ReadUnaligned<Vector256<sbyte>>(&contentPtr[i]);
+
+                    // Count newlines
+                    Vector256<sbyte> newlines = Avx2.CompareEqual(contentV, newlineV);
+                    uint lineBits = unchecked((uint)Avx2.MoveMask(newlines));
+
+                    // Count codepoint start bytes
+                    Vector256<sbyte> starts = Avx2.CompareGreaterThan(contentV, continuations);
+                    uint startBits = unchecked((uint)Avx2.MoveMask(starts));
+
+                    if (lineBits == 0)
+                    {
+                        // If no newlines, add characters in the line
+                        current.CharInLine += (int)Popcnt.PopCount(startBits);
+                    }
+                    else
+                    {
+                        // If newlines, count the lines
+                        current.LineNumber += (int)Popcnt.PopCount(lineBits);
+
+                        // ...and characters only after the last newline
+                        int bytesAfterLast = (int)Lzcnt.LeadingZeroCount(lineBits);
+
+                        startBits = startBits >> (32 - bytesAfterLast);
+                        current.CharInLine = 1 + (int)Popcnt.PopCount(startBits);
+                    }
+                }
+
+                // Count the last partial block
+                if (i < content.Length)
+                {
+                    // Load the last 32 bytes (including some previously counted)
+                    Vector256<sbyte> contentV = Unsafe.ReadUnaligned<Vector256<sbyte>>(&contentPtr[content.Length - 32]);
+
+                    // Count newlines
+                    Vector256<sbyte> newlines = Avx2.CompareEqual(contentV, newlineV);
+                    uint lineBits = unchecked((uint)Avx2.MoveMask(newlines));
+
+                    // Count codepoint start bytes
+                    Vector256<sbyte> starts = Avx2.CompareGreaterThan(contentV, continuations);
+                    uint startBits = unchecked((uint)Avx2.MoveMask(starts));
+
+                    // Screen away bytes counted in the prior loop (the low bits).
+                    int bitsToInclude = (content.Length - i);
+                    lineBits = lineBits >> (32 - bitsToInclude);
+                    startBits = startBits >> (32 - bitsToInclude);
+
+                    if (lineBits == 0)
+                    {
+                        // If no newlines, add characters in the line
+                        current.CharInLine += (int)Popcnt.PopCount(startBits);
+                    }
+                    else
+                    {
+                        // If newlines, count the lines
+                        current.LineNumber += (int)Popcnt.PopCount(lineBits);
+
+                        // ...and add characters after the last newline
+                        int bytesAfterLast = (int)Lzcnt.LeadingZeroCount(lineBits);
+
+                        startBits = startBits >> (32 - bytesAfterLast);
+                        current.CharInLine = 1 + (int)Popcnt.PopCount(startBits);
+                    }
+                }
+            }
+
+            return current;
+        }
+
         public static int CountAndLastIndex(byte b, ReadOnlySpan<byte> content, out int lastIndex)
         {
             if (Avx2.IsSupported == false)
