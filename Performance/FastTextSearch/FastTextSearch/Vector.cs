@@ -21,37 +21,39 @@ namespace FastTextSearch
             return Unsafe.Read<Vector256<sbyte>>(_loader);
         }
 
-        public static int IndexOf(byte b, ReadOnlySpan<byte> content)
+        public static int CodepointCount(ReadOnlySpan<byte> content)
         {
             if (Avx2.IsSupported == false)
             {
-                return content.IndexOf(b);
+                return Utf8.CodepointCount(content);
             }
 
+            if (content == null)
+            {
+                return 0;
+            }
+
+            int count = 0;
             int i = 0;
-            int fullBlockEnd = content.Length - 32;
+            int fullBlockEnd = content.Length - 31;
 
             if (i < fullBlockEnd)
             {
                 fixed (byte* contentPtr = &content[0])
                 {
-                    Vector256<sbyte> newlineV = SetVector256To(b);
+                    Vector256<sbyte> cutoff = SetVector256To(0xBF);
 
                     for (; i < fullBlockEnd; i += 32)
                     {
                         // Load a vector of bytes
                         Vector256<sbyte> contentV = Unsafe.ReadUnaligned<Vector256<sbyte>>(&contentPtr[i]);
 
-                        // Look for the desired byte
-                        Vector256<sbyte> matches = Avx2.CompareEqual(newlineV, contentV);
-                        uint matchBits = unchecked((uint)Avx2.MoveMask(matches));
-
-                        // Return the index if found
-                        if (matchBits != 0)
-                        {
-                            int firstIndex = (int)Bmi1.TrailingZeroCount(matchBits);
-                            return i + firstIndex;
-                        }
+                        // Look for bytes not between 0x80 and 0xBF.
+                        // This is a signed byte (sbyte) operation, so 0x80 is -128 and 0xBF = -64.
+                        // GreaterThan 0xBF means 0xC0-0xFF and 0x00 - 0x7F.
+                        Vector256<sbyte> starts = Avx2.CompareGreaterThan(contentV, cutoff);
+                        uint startBits = unchecked((uint)Avx2.MoveMask(starts));
+                        count += (int)Popcnt.PopCount(startBits);
                     }
                 }
             }
@@ -59,13 +61,13 @@ namespace FastTextSearch
             // Search the last partial block
             for (; i < content.Length; ++i)
             {
-                if (content[i] == b)
+                if (content[i] < 0x80 || content[i] > 0xBF)
                 {
-                    return i;
+                    count++;
                 }
             }
 
-            return -1;
+            return count;
         }
 
         public static int CountAndLastIndex(byte b, ReadOnlySpan<byte> content, out int lastIndex)
@@ -120,6 +122,53 @@ namespace FastTextSearch
             }
 
             return count;
+        }
+
+        public static int IndexOf(byte b, ReadOnlySpan<byte> content)
+        {
+            if (Avx2.IsSupported == false)
+            {
+                return content.IndexOf(b);
+            }
+
+            int i = 0;
+            int fullBlockEnd = content.Length - 32;
+
+            if (i < fullBlockEnd)
+            {
+                fixed (byte* contentPtr = &content[0])
+                {
+                    Vector256<sbyte> newlineV = SetVector256To(b);
+
+                    for (; i < fullBlockEnd; i += 32)
+                    {
+                        // Load a vector of bytes
+                        Vector256<sbyte> contentV = Unsafe.ReadUnaligned<Vector256<sbyte>>(&contentPtr[i]);
+
+                        // Look for the desired byte
+                        Vector256<sbyte> matches = Avx2.CompareEqual(newlineV, contentV);
+                        uint matchBits = unchecked((uint)Avx2.MoveMask(matches));
+
+                        // Return the index if found
+                        if (matchBits != 0)
+                        {
+                            int firstIndex = (int)Bmi1.TrailingZeroCount(matchBits);
+                            return i + firstIndex;
+                        }
+                    }
+                }
+            }
+
+            // Search the last partial block
+            for (; i < content.Length; ++i)
+            {
+                if (content[i] == b)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         public static int IndexOf(ReadOnlySpan<byte> valueToFind, ReadOnlySpan<byte> content)

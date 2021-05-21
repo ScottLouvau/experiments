@@ -1,4 +1,4 @@
-// Copyright (c) Scott Louvau. All rights reserved.
+﻿// Copyright (c) Scott Louvau. All rights reserved.
 // Licensed under the MIT License.
 
 using System;
@@ -12,11 +12,26 @@ namespace FastTextSearch.Test
     public class VectorTests : TestBase
     {
         [Fact]
+        public void Vector_CodepointCount()
+        {
+            Assert.Equal(0, Vector.CodepointCount((Span<byte>)null));
+            Assert.Equal(0, Vector.CodepointCount(new byte[0]));
+
+            // After-block count
+            Assert.Equal(5, Vector.CodepointCount(Encoding.UTF8.GetBytes("Hello")));
+            Assert.Equal(4, Vector.CodepointCount(Encoding.UTF8.GetBytes("©λ⅔👍")));
+
+            // In-block count
+            Assert.Equal(32, Vector.CodepointCount(Encoding.UTF8.GetBytes("01234567890123456789012345678901")));
+            Assert.Equal(12, Vector.CodepointCount(Encoding.UTF8.GetBytes("👍👍👍👍👍👍👍👍👍👍👍👍")));
+        }
+
+        [Fact]
         public void Vector_IndexOf_Byte()
         {
             // Empty string
             Assert.Equal("", VectorIndexOfAll('!', ""));
-            
+
             // First/Middle/Last, falling through to after-block logic
             Assert.Equal("0", VectorIndexOfAll('H', "Hello!"));
             Assert.Equal("2, 3", VectorIndexOfAll('l', "Hello!"));
