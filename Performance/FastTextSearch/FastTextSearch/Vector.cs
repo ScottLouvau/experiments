@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
@@ -17,8 +18,10 @@ namespace FastTextSearch
          *  - AVX2 byte operations treat each byte as a signed value from -128 (0x80) to 127 (0x7F).
          *  
          *  - AVX2 byte operations produce a vector output, with all zero byte for false and an all one byte (-1) for true.
-         *  - Use Avx2.MoveMask to turn this set of bytes into a set of bits. The lowest bit corresponds to the first input byte.
-         *  
+         *  - Use Avx2.MoveMask to turn this set of bytes into a set of bits. 
+         *    - First bytes are low bits.
+         *    - Last bytes are high bits.
+         *    
          *  - UTF-8 continuation bytes are 0x80 - 0xBF, so all signed bytes > 0xBF are codepoint start bytes.
          */
 
@@ -130,7 +133,7 @@ namespace FastTextSearch
                         int bytesAfterLast = (int)Lzcnt.LeadingZeroCount(lineBits);
 
                         startBits = startBits >> (32 - bytesAfterLast);
-                        current.CharInLine = 1 + (int)Popcnt.PopCount(startBits);
+                        current.CharInLine = 1 + (bytesAfterLast == 0 ? 0 : (int)Popcnt.PopCount(startBits));
                     }
                 }
 
@@ -167,7 +170,8 @@ namespace FastTextSearch
                         int bytesAfterLast = (int)Lzcnt.LeadingZeroCount(lineBits);
 
                         startBits = startBits >> (32 - bytesAfterLast);
-                        current.CharInLine = 1 + (int)Popcnt.PopCount(startBits);
+                        current.CharInLine = 1 + (bytesAfterLast == 0 ? 0 : (int)Popcnt.PopCount(startBits));
+
                     }
                 }
             }

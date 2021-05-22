@@ -27,8 +27,8 @@ namespace FastTextSearch.Test
         //[Fact]
         //public void SearcherAdhocDebugging()
         //{
-        //    string matches = AllMatches("Convert", @"C:\Code\bion\csharp\ScaleDemo\Region2.cs", FileSearcher.Utf8);
-            
+        //    string matches = AllMatches("Console.WriteLine", @"C:\Code\bion\csharp\BSOA\BSOA.Demo\Measure.cs", FileSearcher.Utf8);
+
         //    // No Asserts. Replace with a sample case and set breakpoint to debug issues encountered.
         //}
 

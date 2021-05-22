@@ -261,7 +261,7 @@ namespace FastTextSearch
                         int matchIndex = Vector.IndexOf(ValueToFind, content.Slice(startIndex));
                         if (matchIndex == -1) { break; }
 
-                        current = FilePosition.Update(current, content.Slice(0, startIndex + matchIndex));
+                        current = Vector.FilePositionUpdate(current, content.Slice(0, startIndex + matchIndex));
                         matches ??= new List<FilePosition>();
                         matches.Add(current);
 
@@ -276,7 +276,7 @@ namespace FastTextSearch
                     if (content.Length >= ValueToFind.Length)
                     {
                         int bytesNotKept = (content.Length - (ValueToFind.Length - 1));
-                        current = FilePosition.Update(current, content.Slice(0, bytesNotKept));
+                        current = Vector.FilePositionUpdate(current, content.Slice(0, bytesNotKept));
                         content = content.Slice(bytesNotKept);
                     }
 

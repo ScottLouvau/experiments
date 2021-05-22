@@ -72,12 +72,43 @@ namespace FastTextSearch.Test
             Assert.Equal("(8, 1)", Next(' ', ref current, ref content)?.LineAndChar);
             Assert.Equal("(9, 48)", Next(';', ref current, ref content)?.LineAndChar);
             Assert.Equal("(9, 49)", Next('\r', ref current, ref content)?.LineAndChar);
+
+            text = File.ReadAllBytes(@"C:\Code\bion\csharp\Bion.Console\Program.cs");
+            content = text;
+            current = FilePosition.Start(@"Bion.Console\Program.cs");
+
+            Assert.Equal("(24, 7)", Next("Convert", ref current, ref content)?.LineAndChar);
+            Assert.Equal("(27, 7)", Next("Convert", ref current, ref content)?.LineAndChar);
+            Assert.Equal("(161, 39)", Next("Convert", ref current, ref content)?.LineAndChar);
+            Assert.Equal("(164, 25)", Next("Convert", ref current, ref content)?.LineAndChar);
+
+
         }
 
         private FilePosition? Next(char b, ref FilePosition current, ref Span<byte> content)
         {
             // Look for a match
             int nextMatch = content.IndexOf((byte)b);
+            if (nextMatch == -1) { return null; }
+
+            // Map the index to a Line and Char
+            FilePosition match = Vector.FilePositionUpdate(current, content.Slice(0, nextMatch));
+
+            // Reset the Span and Position to the next char (so the next search will find the next occurrence)
+            current = match;
+            current.ByteOffset++;
+            current.CharInLine++;
+            content = content.Slice(nextMatch + 1);
+
+            return match;
+        }
+
+        private FilePosition? Next(string valueToFind, ref FilePosition current, ref Span<byte> content)
+        {
+            Span<byte> bytesToFind = Encoding.UTF8.GetBytes(valueToFind);
+
+            // Look for a match
+            int nextMatch = Vector.IndexOf(bytesToFind, content);
             if (nextMatch == -1) { return null; }
 
             // Map the index to a Line and Char
