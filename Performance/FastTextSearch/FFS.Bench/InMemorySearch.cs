@@ -1,93 +1,59 @@
-﻿using FastTextSearch;
-using RoughBench.Attributes;
+﻿using RoughBench.Attributes;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Text;
 
 namespace FFS.Bench
 {
     public class InMemorySearch
     {
-        public const string TestSearchFor = "Convert";
-        public const string TestSearchWithin = @"C:\CodeSnap\bion";
-        public const string ConcatenatedPath = "bion.concat";
+        private string SearchForString;
+        private byte[] SearchForBytes;
 
-        private string ConcatenatedString;
-        private byte[] ConcatenatedBytes;
-        public long BytesSearched => ConcatenatedBytes.Length;
+        private Func<string> GetString;
+        private Func<byte[]> GetBytes;
 
-        public InMemorySearch()
+        public long BytesSearched { get; private set; }
+
+        public InMemorySearch(string searchFor, Func<string> getString, Func<byte[]> getBytes)
         {
-            if (!File.Exists(ConcatenatedPath)) { TextFileConcatenator.ConcatenateTextUnder(TestSearchWithin, ConcatenatedPath); }
-            ConcatenatedBytes = File.ReadAllBytes(ConcatenatedPath);
-            ConcatenatedString = Encoding.UTF8.GetString(ConcatenatedBytes);
+            SearchForString = searchFor;
+            SearchForBytes = Encoding.UTF8.GetBytes(searchFor);
+
+            GetString = getString;
+            GetBytes = getBytes;
         }
 
         [Benchmark]
         public void String_IndexOf()
         {
-            List<SearchResult> results = new List<SearchResult>();
-            int startIndex = 0;
-            while (true)
-            {
-                int nextIndex = ConcatenatedString.IndexOf(TestSearchFor, startIndex);
-                if (nextIndex == -1) { break; }
-
-                results.Add(new SearchResult("", nextIndex));
-                startIndex = nextIndex + 1;
-            }
+            string text = GetString();
+            Searchers.String_IndexOf(SearchForString, text, null, new List<SearchResult>());
+            BytesSearched = text.Length;
         }
 
         [Benchmark]
         public void String_IndexOfOrdinal()
         {
-            List<SearchResult> results = new List<SearchResult>();
-            int startIndex = 0;
-            while (true)
-            {
-                int nextIndex = ConcatenatedString.IndexOf(TestSearchFor, startIndex, StringComparison.Ordinal);
-                if (nextIndex == -1) { break; }
-
-                results.Add(new SearchResult("", nextIndex));
-                startIndex = nextIndex + 1;
-            }
+            string text = GetString();
+            Searchers.String_IndexOf_Ordinal(SearchForString, text, null, new List<SearchResult>());
+            BytesSearched = text.Length;
         }
 
         [Benchmark]
         public void Span_IndexOf()
         {
-            List<SearchResult> results = new List<SearchResult>();
-            Span<byte> bytesToFind = Encoding.UTF8.GetBytes(TestSearchFor);
-            Span<byte> text = ConcatenatedBytes;
-
-            int startIndex = 0;
-            while (true)
-            {
-                int nextIndex = text.Slice(startIndex).IndexOf(bytesToFind);
-                if (nextIndex == -1) { break; }
-
-                results.Add(new SearchResult("", startIndex + nextIndex));
-                startIndex = startIndex + nextIndex + 1;
-            }
+            byte[] bytes = GetBytes();
+            Searchers.Span_IndexOf(SearchForBytes, bytes, null, new List<SearchResult>());
+            BytesSearched = bytes.Length;
         }
 
         [Benchmark]
         public void FastTextSearch_IndexOf()
         {
-            List<SearchResult> results = new List<SearchResult>();
-            Span<byte> bytesToFind = Encoding.UTF8.GetBytes(TestSearchFor);
-            Span<byte> text = ConcatenatedBytes;
-
-            int startIndex = 0;
-            while (true)
-            {
-                int nextIndex = Vector.IndexOf(bytesToFind, text.Slice(startIndex));
-                if (nextIndex == -1) { break; }
-
-                results.Add(new SearchResult("", startIndex + nextIndex));
-                startIndex = startIndex + nextIndex + 1;
-            }
+            byte[] bytes = GetBytes();
+            Searchers.FastTextSearch_IndexOf(SearchForBytes, bytes, null, new List<SearchResult>());
+            BytesSearched = bytes.Length;
         }
     }
 }
