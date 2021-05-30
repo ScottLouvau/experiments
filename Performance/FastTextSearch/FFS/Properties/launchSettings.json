@@ -2,7 +2,7 @@
   "profiles": {
     "FFS": {
       "commandName": "Project",
-      "commandLineArgs": "Convert C:\\Download\\Csv\\Big \"*.*\" Unused.log DotNet"
+      "commandLineArgs": "Convert C:\\Download\\Csv\\Big "
     }
   }
 }
