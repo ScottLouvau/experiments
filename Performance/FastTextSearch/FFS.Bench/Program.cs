@@ -8,13 +8,15 @@ namespace FFS.Bench
 {
     class Program
     {
+        // Benchmarker: Option to add another output column w/callback?
+        // Option to pass an instance of a class to measure?
         static void Main(string[] args)
         {
-            //Benchmarker b = new Benchmarker();
-            //b.Run<Enumerate>();
+            Benchmarker b = new Benchmarker();
+            b.Run<Enumerate>();
 
             // bion: 862 files, 42.8 MB. Text: 504 files, 3.65 MB.
-            Sniffer.Assess(@"C:\CodeBig");
+            //Sniffer.Assess(@"C:\CodeBig");
             //RunSeries("Convert", @"C:\CodeSnap\bion");
             //RunSeries("~~~", @"C:\CodeSnap\bion");
 

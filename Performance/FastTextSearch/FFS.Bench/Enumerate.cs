@@ -7,16 +7,16 @@ namespace FFS.Bench
 {
     public class Enumerate
     {
-        public const string RootPath = @"C:\CodeSnap";
+        public string RootPath { get; private set; } = @"C:\CodeSnap";
 
-        // 150 ms
+        // 75 ms
         [Benchmark]
         public void Directory_GetFiles()
         {
             Directory.GetFiles(RootPath, "*.*", SearchOption.AllDirectories);
         }
 
-        // 150 ms
+        // 75 ms
         [Benchmark]
         public void DirectoryInfo_GetFiles()
         {
@@ -24,7 +24,63 @@ namespace FFS.Bench
             root.GetFiles("*.*", SearchOption.AllDirectories);
         }
 
-        // 150 ms
+        // 155 ms (2x GetFiles AllDirectories)
+        [Benchmark]
+        public void DirectoryInfo_GetFilesRecursive()
+        {
+            List<FileInfo> results = new List<FileInfo>();
+            DirectoryInfo_GetFilesRecursive(new DirectoryInfo(RootPath), results);
+        }
+
+        private void DirectoryInfo_GetFilesRecursive(DirectoryInfo under, List<FileInfo> files)
+        {
+            files.AddRange(under.GetFiles());
+
+            foreach(DirectoryInfo subfolder in under.GetDirectories())
+            {
+                DirectoryInfo_GetFilesRecursive(subfolder, files);
+            }
+        }
+
+        // 81 ms
+        [Benchmark]
+        public void FileSystemInfo_GetFilesRecursive()
+        {
+            List<FileInfo> results = new List<FileInfo>();
+            FileSystemInfo_GetFilesRecursive(new DirectoryInfo(RootPath), results);
+        }
+
+        private void FileSystemInfo_GetFilesRecursive(DirectoryInfo under, List<FileInfo> files)
+        {
+            FileSystemInfo[] children = under.GetFileSystemInfos();
+
+            foreach (FileSystemInfo child in children)
+            {
+                if (child is FileInfo)
+                {
+                    files.Add((FileInfo)child);
+                }
+            }
+
+            foreach (FileSystemInfo child in children)
+            {
+                if (child is DirectoryInfo)
+                {
+                    FileSystemInfo_GetFilesRecursive((DirectoryInfo)child, files);
+                }
+            }
+        }
+
+        // TopDirectoryOnly: 25 us
+        // AllDirectories: 72 ms
+        [Benchmark]
+        public void DirectoryInfo_GetDirectories()
+        {
+            DirectoryInfo root = new DirectoryInfo(RootPath);
+            root.GetDirectories("*.*", SearchOption.TopDirectoryOnly);
+        }
+
+        // 75 ms
         [Benchmark]
         public void EnumerateAndSplit()
         {
