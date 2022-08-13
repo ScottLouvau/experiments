@@ -1,3 +1,15 @@
+DateTime Parsing Performance sample.
+
+## Usage
+
+```
+./build (or "dotnet publish -c Release -a x64")
+./DateTimeParse write to write sample data files.
+./DateTimeParse all to measure all implementations.
+```
+
+## Results
+
 Runtimes, in milliseconds, for DateTime parsing.
 NET 6.0, Release build, 10M DateTimes, warm.
 
