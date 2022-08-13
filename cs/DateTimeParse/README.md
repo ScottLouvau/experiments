@@ -3,9 +3,14 @@ DateTime Parsing Performance sample.
 ## Usage
 
 ```
-./build (or "dotnet publish -c Release -a x64")
-./DateTimeParse write to write sample data files.
-./DateTimeParse all to measure all implementations.
+# Build (or "dotnet publish -c Release -a x64")
+./build
+
+# Generate sample data
+./DateTimeParse write
+
+# Measure all implementations
+./DateTimeParse all
 ```
 
 ## Results
