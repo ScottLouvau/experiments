@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# You must install dotnet-trace first.
+#  dotnet tool install --global dotnet-trace
+
+# Profile 'DateTimeParse' run with argument 'Span' (test the 'Span' parse method only)
+#cd ./bin/Release/net6.0/osx-arm64/publish
+dotnet-trace collect --format Speedscope -- DateTimeParse Original
+
+# -format Speedscope 
+
+# View with https://www.speedscope.app]
+# or npm install -g speedscope; then 'speedscope <X.speedscope.json>'
+# 'Left Heavy' for hierarchical breakdown by function. (Hot Path like view)
+# 'Sandwich' for samples by method (Function View)

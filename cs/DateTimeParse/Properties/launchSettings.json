@@ -1,0 +1,16 @@
+{
+  "profiles": {
+    "write": {
+      "commandName": "Project",
+      "commandLineArgs": "write"
+    },
+    "all": {
+      "commandName": "Project",
+      "commandLineArgs": "all"
+    },
+    "current": {
+      "commandName": "Project",
+      "commandLineArgs": "spanbyte"
+    }
+  }
+}
