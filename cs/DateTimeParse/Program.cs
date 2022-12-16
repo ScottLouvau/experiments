@@ -380,11 +380,17 @@ namespace DateTimeParse
             }
         }
 
-        public static IList<T> Time<T>(Func<IList<T>> action, string name = "Parsed")
+        public static IList<System.DateTime> Time(Func<IList<System.DateTime>> action, string name = "Parsed", bool logSum = false)
         {
             Stopwatch w = Stopwatch.StartNew();
-            IList<T> result = action();
+            IList<System.DateTime> result = action();
             Console.WriteLine($" {w.ElapsedMilliseconds:n0}\t{name}");
+
+            if (logSum)
+            {
+                Console.WriteLine($"Ms Total: {result.Sum((dt) => (long)dt.Millisecond):n0}");
+            }
+
             return result;
         }
 
@@ -434,12 +440,12 @@ namespace DateTimeParse
 
         public static void Usage(Dictionary<string, Func<string, IList<DateTime>>> methods)
         {
-                Console.WriteLine("Usage: DateTimeParse <mode>");
-                Console.WriteLine(" Modes:");
-                Console.WriteLine("   write  - writes sample DateTime input files");
-                Console.WriteLine("   all    - run and time all parse variations");
-                Console.WriteLine("   [name] - test parse variation with 'name' (case-insensitive).");
-                Console.WriteLine($"     Variations: {String.Join(", ", methods.Keys)}");
+            Console.WriteLine("Usage: DateTimeParse <mode>");
+            Console.WriteLine(" Modes:");
+            Console.WriteLine("   write  - writes sample DateTime input files");
+            Console.WriteLine("   all    - run and time all parse variations");
+            Console.WriteLine("   [name] - test parse variation with 'name' (case-insensitive).");
+            Console.WriteLine($"     Variations: {String.Join(", ", methods.Keys)}");
         }
 
         public static int Main(string[] args)
@@ -467,7 +473,7 @@ namespace DateTimeParse
                 default:
                     if (methods.TryGetValue(mode, out var method))
                     {
-                        Time(() => method(DateTimesPath), mode);
+                        Time(() => method(DateTimesPath), mode, logSum: true);
                         break;
                     }
                     else
