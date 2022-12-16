@@ -20,7 +20,7 @@ namespace DateTimeParse
     /// </remarks>
     public static class Program
     {
-        public const string DateTimesPath = @"..\..\..\Sample.DatesOnly.log";
+        public const string DateTimesPath = @"../../../Sample.DatesOnly.log";
         public const int ValueLength = 28;
         public readonly static int LineLength = ValueLength + Environment.NewLine.Length;
 
