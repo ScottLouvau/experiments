@@ -4,6 +4,7 @@ members = [
     "actix-test",
     "axum-test",
     "h2-test",
+    "h2x-test",
     "hyper-test",
     "may_minihttp_test",
     "rouille-test",
