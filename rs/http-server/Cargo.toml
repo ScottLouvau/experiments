@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = [
+    "actix-test",
+    "axum-test",
+    "h2-test",
+    "hyper-test",
+    "may_minihttp_test",
+    "rouille-test",
+    "tide-test",
+    "warp-test"
+]
