@@ -20,7 +20,7 @@ namespace DateTimeParse
     /// </remarks>
     public static class Program
     {
-        public const string DateTimesPath = @"../../../Sample.DatesOnly.log";
+        public const string DateTimesPath = @"../../Sample.DatesOnly.log";
         public const int ValueLength = 28;
         public readonly static int LineLength = ValueLength + Environment.NewLine.Length;
 
@@ -35,69 +35,9 @@ namespace DateTimeParse
                     string? line = r.ReadLine();
                     if (line == null) { break; }
 
-                    DateTime value = DateTime.Parse(line).ToUniversalTime();
-                    results.Add(value);
-                }
-
-                return results;
-            }
-        }
-
-        public static IList<DateTime> AdjustToUniversal(string filePath)
-        {
-            using (StreamReader r = File.OpenText(filePath))
-            {
-                List<DateTime> results = new List<DateTime>();
-
-                while (true)
-                {
-                    string? line = r.ReadLine();
-                    if (line == null) { break; }
-
-                    DateTime value = DateTime.Parse(line, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
-                    results.Add(value);
-                }
-
-                return results;
-            }
-        }
-
-        public static IList<DateTime> ParseExact(string filePath)
-        {
-            using (StreamReader r = File.OpenText(filePath))
-            {
-                List<DateTime> results = new List<DateTime>();
-
-                while (true)
-                {
-                    string? line = r.ReadLine();
-                    if (line == null) { break; }
-
-                    // Fast [~2,550 ms], but returns adjusted to DateTimeKind.Local. Adding DateTimeStyles.AdjustToUniversal makes it much slower [~5,875 ms].
-                    DateTime value = DateTime.ParseExact(line, "O", CultureInfo.InvariantCulture);//, DateTimeStyles.AdjustToUniversal);
-
-                    results.Add(value);
-                }
-
-                return results;
-            }
-        }
-
-        public static IList<DateTime> Offset(string filePath)
-        {
-            using (StreamReader r = File.OpenText(filePath))
-            {
-                List<DateTime> results = new List<DateTime>();
-
-                while (true)
-                {
-                    string? line = r.ReadLine();
-                    if (line == null) { break; }
-
-                    // ~3,500
+                    // 2-3x slower if format has to be detected
                     //DateTimeOffset value = DateTimeOffset.Parse(line);
 
-                    // ~1,400
                     DateTimeOffset value = DateTimeOffset.ParseExact(line, "O", CultureInfo.InvariantCulture);
                     results.Add(value.UtcDateTime);
                 }
@@ -112,74 +52,44 @@ namespace DateTimeParse
             {
                 int count = (int)((r.BaseStream.Length - r.BaseStream.Position) / LineLength);
                 List<DateTime> results = new List<DateTime>(count);
-                Span<char> buffer = new Span<char>(new char[LineLength * 1024]);
+
+                Span<char> buffer = new Span<char>(new char[LineLength * 2048]);
+                int lengthReused = 0;
 
                 while (!r.EndOfStream)
                 {
-                    int lengthRead = r.Read(buffer);
-                    Span<char> block = buffer.Slice(0, lengthRead);
+                    int lengthRead = r.Read(buffer.Slice(lengthReused));
+                    Span<char> block = buffer.Slice(0, lengthReused + lengthRead);
 
                     while (block.Length > 0)
                     {
-                        Span<char> valueText = block.Slice(0, ValueLength);
+                        int newline = block.IndexOf('\n'); // ValueLength; (550 -> 460 ms)
+
+                        Span<char> valueText = block.Slice(0, newline);
                         DateTimeOffset value = DateTimeOffset.ParseExact(valueText, "O", CultureInfo.InvariantCulture);
                         results.Add(value.UtcDateTime);
-                        block = block.Slice(LineLength);
+                        block = block.Slice(newline + 1);
                     }
+
+                    if (block.Length > 0) { 
+                        block.CopyTo(buffer);
+                    }
+                    
+                    lengthReused = block.Length;
                 }
 
                 return results;
             }
         }
 
-        public static IList<DateTime> Span_ParseInParts(string filePath)
-        {
-            using (StreamReader r = File.OpenText(filePath))
-            {
-                int count = (int)((r.BaseStream.Length - r.BaseStream.Position) / LineLength);
-                List<DateTime> results = new List<DateTime>(count);
-                Span<char> buffer = new Span<char>(new char[LineLength * 1024]);
-
-                while (true)
-                {
-                    int lengthRead = r.Read(buffer);
-                    Span<char> block = buffer.Slice(0, lengthRead);
-                    if (block.Length == 0) { break; }
-
-                    while (block.Length > 0)
-                    {
-                        Span<char> t = block.Slice(0, ValueLength);
-
-                        DateTime value = new DateTime(
-                            int.Parse(t.Slice(0, 4), NumberStyles.None),
-                            int.Parse(t.Slice(5, 2), NumberStyles.None),
-                            int.Parse(t.Slice(8, 2), NumberStyles.None),
-                            int.Parse(t.Slice(11, 2), NumberStyles.None),
-                            int.Parse(t.Slice(14, 2), NumberStyles.None),
-                            int.Parse(t.Slice(17, 2), NumberStyles.None),
-                            DateTimeKind.Utc
-                        );
-
-                        // Add sub-seconds (no ctor takes below milliseconds as parts)
-                        value = value.AddTicks(int.Parse(t.Slice(20, 7), NumberStyles.None));
-
-                        results.Add(value);
-                        block = block.Slice(LineLength);
-                    }
-                }
-
-                return results;
-            }
-        }
-
-        public static IList<DateTime> SpanByte(string filePath)
+        public static IList<DateTime> Custom(string filePath)
         {
             using (Stream stream = File.OpenRead(filePath))
             {
                 int count = (int)((stream.Length - stream.Position) / LineLength);
                 List<DateTime> results = new List<DateTime>(count);
 
-                Span<byte> buffer = new Span<byte>(new byte[LineLength * 1024]);
+                Span<byte> buffer = new Span<byte>(new byte[LineLength * 2048]);
 
                 long length = stream.Length;
                 while (stream.Position < length)
@@ -216,14 +126,14 @@ namespace DateTimeParse
             }
         }
 
-        public static IList<DateTime> SpanByte_MyParse(string filePath)
+        public static IList<DateTime> Custom_MyParse(string filePath)
         {
             using (Stream stream = File.OpenRead(filePath))
             {
                 int count = (int)((stream.Length - stream.Position) / LineLength);
                 List<DateTime> results = new List<DateTime>(count);
 
-                Span<byte> buffer = new Span<byte>(new byte[LineLength * 1024]);
+                Span<byte> buffer = new Span<byte>(new byte[LineLength * 2048]);
 
                 long length = stream.Length;
                 while (stream.Position < length)
@@ -276,14 +186,14 @@ namespace DateTimeParse
             return result;
         }
 
-        public static IList<DateTime> SpanByte_Unrolled(string filePath)
+        public static IList<DateTime> Custom_NoErrors(string filePath)
         {
             using (Stream stream = File.OpenRead(filePath))
             {
                 int count = (int)((stream.Length - stream.Position) / LineLength);
                 List<DateTime> results = new List<DateTime>(count);
 
-                Span<byte> buffer = new Span<byte>(new byte[LineLength * 1024]);
+                Span<byte> buffer = new Span<byte>(new byte[LineLength * 2048]);
 
                 long length = stream.Length;
                 while (stream.Position < length)
@@ -321,45 +231,18 @@ namespace DateTimeParse
             DateTime value = new DateTime(year, month, day, hour, minute, second, DateTimeKind.Utc);
 
             // Add sub-seconds (no ctor to pass with other parts)
-            int subseconds = 1000000 * t[20] + 100000 * t[21] + 10000 * t[22] + 1000 * t[23] + 100 * t[24] + 10 * t[25] + t[26] - 1111111 * Zero;
+            int subseconds = 
+                1000000 * t[20] 
+                + 100000 * t[21] 
+                + 10000 * t[22] 
+                + 1000 * t[23] 
+                + 100 * t[24] 
+                + 10 * t[25] 
+                + t[26] 
+                - 1111111 * Zero;
+
             value = value.AddTicks(subseconds);
             return value;
-        }
-
-        public static IList<DateTime> BinaryTicks(string filePath)
-        {
-            using (BinaryReader r = new BinaryReader(File.OpenRead(Path.ChangeExtension(filePath, ".bin"))))
-            {
-                int count = (int)((r.BaseStream.Length - r.BaseStream.Position) / 8);
-
-                // Make a List correctly pre-sized
-                List<DateTime> results = new List<DateTime>(count);
-
-                // Read UTC ticks values directly and construct DateTimes from them
-                for (int i = 0; i < count; ++i)
-                {
-                    long ticks = r.ReadInt64();
-                    results.Add(new DateTime(ticks, DateTimeKind.Utc));
-                }
-
-                return results;
-            }
-        }
-
-        public static IList<DateTime> BinaryBulk(string filePath)
-        {
-            using (Stream stream = File.OpenRead(Path.ChangeExtension(filePath, ".bin")))
-            {
-                int count = (int)((stream.Length - stream.Position) / 8);
-
-                // Make a DateTime array the correct size
-                DateTime[] results = new DateTime[count];
-
-                // Read the Ticks bytes directly into the array, interpreting them as DateTimes with no per-value conversion
-                stream.Read(MemoryMarshal.Cast<DateTime, byte>(results.AsSpan()));
-
-                return results;
-            }
         }
 
         // Build the sample files (many DateTimes, in text one per line or in binary ticks form)
@@ -380,16 +263,23 @@ namespace DateTimeParse
             }
         }
 
-        public static IList<System.DateTime> Time(Func<IList<System.DateTime>> action, string name = "Parsed", bool logSum = false)
+        public static IList<System.DateTime> Time(Func<IList<System.DateTime>> action, string name)
         {
-            Stopwatch w = Stopwatch.StartNew();
-            IList<System.DateTime> result = action();
-            Console.WriteLine($" {w.ElapsedMilliseconds:n0}\t{name}");
+            IList<System.DateTime> result = null!;
 
-            if (logSum)
+            int iterations = 0;
+            Stopwatch w = Stopwatch.StartNew();
+
+            for (int i = 0; i < 10; ++i)
             {
-                Console.WriteLine($"Ms Total: {result.Sum((dt) => (long)dt.Millisecond):n0}");
+                result = action();
+
+                iterations += 1;
+                if (w.ElapsedMilliseconds > 1500) { break; }
             }
+
+            long average = w.ElapsedMilliseconds / iterations;
+            Console.WriteLine($"| {average.ToString("n0").PadLeft(5)} | {name.PadRight(20)} |");
 
             return result;
         }
@@ -428,9 +318,13 @@ namespace DateTimeParse
             return methods;
         }
 
-        public static void RunAll(Dictionary<string, Func<string, IList<DateTime>>> methods)
+        public static void RunAll()
         {
-            Console.WriteLine(" ms\tName");
+            Dictionary<string, Func<string, IList<DateTime>>> methods = SelfReflect();
+
+            Console.WriteLine("|    ms | Name                 |");
+            Console.WriteLine("| ----- | -------------------- |");
+
             foreach (string name in methods.Keys)
             {
                 Time(() => methods[name](DateTimesPath), name);
@@ -438,53 +332,9 @@ namespace DateTimeParse
             }
         }
 
-        public static void Usage(Dictionary<string, Func<string, IList<DateTime>>> methods)
+        public static void Main(string[] args)
         {
-            Console.WriteLine("Usage: DateTimeParse <mode>");
-            Console.WriteLine(" Modes:");
-            Console.WriteLine("   write  - writes sample DateTime input files");
-            Console.WriteLine("   all    - run and time all parse variations");
-            Console.WriteLine("   [name] - test parse variation with 'name' (case-insensitive).");
-            Console.WriteLine($"     Variations: {String.Join(", ", methods.Keys)}");
-        }
-
-        public static int Main(string[] args)
-        {
-            Dictionary<string, Func<string, IList<DateTime>>> methods = SelfReflect();
-
-            if (args.Length < 1)
-            {
-                Usage(methods);
-                return -1;
-            }
-
-            string mode = args[0].ToLowerInvariant();
-
-            switch (mode)
-            {
-                case "write":
-                    WriteSampleFile(DateTimesPath);
-                    break;
-
-                case "all":
-                    RunAll(methods);
-                    break;
-
-                default:
-                    if (methods.TryGetValue(mode, out var method))
-                    {
-                        Time(() => method(DateTimesPath), mode, logSum: true);
-                        break;
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Error: Unknown Mode '{mode}'.");
-                        Usage(methods);
-                        return -1;
-                    }
-            }
-
-            return 0;
+            RunAll();
         }
     }
 }
