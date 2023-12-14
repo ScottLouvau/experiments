@@ -1,9 +1,6 @@
-﻿using System.Buffers.Text;
-using System.Diagnostics;
-using System.Globalization;
+﻿using System.Diagnostics;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+using System.Xml;
 
 namespace DateTimeParse
 {
@@ -11,7 +8,7 @@ namespace DateTimeParse
     ///  Performance Tuning Example showing alternatives for parsing a file of DateTimes.    
     /// </summary>
     /// <remarks>
-    ///  Uses 'O' DateTime format, which is 28 bytes (30 with \r\n)
+    ///  Uses 'O' DateTime format, which is 28 bytes (29 with \n)
     ///    2022-04-14T02:32:53.4028225Z
     ///    **** ** ** ** ** ** *******
     ///    0123456789012345678901234567
@@ -20,23 +17,20 @@ namespace DateTimeParse
     /// </remarks>
     public static class Program
     {
-        public const string DateTimesPath = @"../../Sample.DatesOnly.log";
+        // One folder up from executable or current folder; should be the 'datetime-parse' shared folder for 'dotnet run' or built .dll or .exe
+        public const string DateTimesPath = @"../Sample.DatesOnly.log";
 
-
-
-        // Build the sample files (many DateTimes, in text one per line or in binary ticks form)
+        // Build the sample files (many DateTimes, roundtrippable 'O' format)
         public static void WriteSampleFile(string filePath, int count = 10 * 1000 * 1000)
         {
             Random r = new Random();
             DateTime current = DateTime.UtcNow.AddDays(-180 * r.NextDouble());
 
             using (StreamWriter wT = File.CreateText(filePath))
-            using (BinaryWriter wB = new BinaryWriter(File.Create(Path.ChangeExtension(filePath, ".bin"))))
             {
                 for (int i = 0; i < count; i++)
                 {
-                    wT.WriteLine($"{current:O}");
-                    wB.Write(current.Ticks);
+                    wT.Write($"{current:O}\n");
                     current = current.AddMilliseconds(10000 * r.NextDouble() * r.NextDouble());
                 }
             }
@@ -57,25 +51,16 @@ namespace DateTimeParse
                 if (w.ElapsedMilliseconds > 1500) { break; }
             }
 
+            w.Stop();
             long average = w.ElapsedMilliseconds / iterations;
-            Console.WriteLine($"| {average.ToString("n0").PadLeft(5)} | {name.PadRight(30)} |");
+
+            // After timing stops, verify loading by finding the sum of milliseconds
+            long check = result.Sum((dt) => (long)dt.TimeOfDay.Milliseconds);
+
+            // Log the runtime, method name, count loaded, and milliseconds-sum-mod-10000
+            Console.WriteLine($"| {average.ToString("n0").PadLeft(5)} | {name.PadRight(30)} | {check} |");
 
             return result;
-        }
-
-        private static IList<DateTime>? Expected = null;
-        public static IList<DateTime> Verify(IList<DateTime> values)
-        {
-            Expected ??= ParseVariations.Original(DateTimesPath);
-
-            int different = 0;
-            for (int i = 0; i < Expected.Count; ++i)
-            {
-                if (!values[i].Equals(Expected[i])) { different++; }
-            }
-
-            Console.WriteLine($" {(different == 0 ? "PASS" : "FAIL")}");
-            return values;
         }
 
         public static Dictionary<string, Func<string, IList<DateTime>>> Reflect()
@@ -99,16 +84,23 @@ namespace DateTimeParse
 
         public static void RunAll()
         {
+            if (!File.Exists(DateTimesPath)) { 
+                Console.WriteLine("Generating DateTime data file...");
+                WriteSampleFile(DateTimesPath); 
+            }
+
             Dictionary<string, Func<string, IList<DateTime>>> methods = Reflect();
 
-            Console.WriteLine($"|    ms | .NET {System.Environment.Version,-25} |");
-            Console.WriteLine("| ----- | ------------------------------ |");
+            Console.WriteLine();
+            Console.WriteLine($"|    ms | .NET {System.Environment.Version,-25} | SumMillis  |");
+            Console.WriteLine("| ----- | ------------------------------ | ---------- |");
 
             foreach (string name in methods.Keys)
             {
                 Time(() => methods[name](DateTimesPath), name);
-                //Verify(Time(() => methods[name](DateTimesPath), name));
             }
+
+            Console.WriteLine();
         }
 
         public static void Main(string[] args)

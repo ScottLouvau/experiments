@@ -1,3 +1,8 @@
 # Ignore giant generated data file
 Sample.DatesOnly.log
 Sample.DatesOnly.bin
+
+# Ignore custom output folders
+cs-bin/
+cs-pub/
+rs-bin/
