@@ -9,6 +9,7 @@
 .vscode/
 
 # Build output
+target/
 [Dd]ebug/
 [Rr]elease/
 x64/
