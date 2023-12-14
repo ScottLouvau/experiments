@@ -1,33 +1,32 @@
 DateTime Parsing Performance sample.
 
-## Usage
-
-```
-# Build (or "dotnet publish -c Release -a x64")
-./build
-
-# Generate sample data
-./DateTimeParse write
-
-# Measure all implementations
-./DateTimeParse all
-```
-
 ## Results
 
 Runtimes, in milliseconds, for DateTime parsing.
-NET 6.0, Release build, 10M DateTimes, warm.
+Apple M1 Pro 8cRelease build, 10M DateTimes, warm.
 
-| Name              | Ryzen 4800U | Ryzen 4900HS | M1 Pro 6+2 |
-| ----------------- | -----------:| ------------:| ----------:|
-| Original          | 6,901       | 5,954        | 4,365      |
-| AdjustToUniversal | 3,704       | 3,132        | 1,934      |
-| ParseExact        | 2,866       | 2,527        | 1,607      |
-| Offset            | 1,492       | 1,343        | 793        |
-| Span              | 878         | 837          | 453        |
-| Span_ParseInParts | 1,080       | 960          | 711        |
-| SpanByte          | 592         | 557          | 401        |
-| SpanByte_MyParse  | 485         | 435          | 465        |
-| SpanByte_Unrolled | 182         | 160          | 113        |
-| BinaryTicks       | 261         | 242          | 144        |
-| BinaryBulk        | 33          | 34           | 11         |
+|    ms | .NET 6.0.25                    |
+| ----- | ------------------------------ |
+|   829 | Original                       |
+|   531 | Span                           |
+|   383 | Custom                         |
+|   469 | Custom_MyParse                 |
+|   118 | Custom_NoErrors                |
+| 4,160 | Naive_RustNaiveClosest         |
+| 4,448 | Naive_DateTimeParse            |
+| 1,623 | Naive_ParseExactButNotUtc      |
+| 3,418 | Naive_ParseExactUtcSlow        |
+|   807 | Naive_DateTimeOffsetExact      |
+
+|    ms | .NET 8.0.0                     |
+| ----- | ------------------------------ |
+|   519 | Original                       |
+|   305 | Span                           |
+|   315 | Custom                         |
+|   199 | Custom_MyParse                 |
+|    97 | Custom_NoErrors                |
+| 3,716 | Naive_RustNaiveClosest         |
+| 3,488 | Naive_DateTimeParse            |
+| 1,058 | Naive_ParseExactButNotUtc      |
+| 2,071 | Naive_ParseExactUtcSlow        |
+|   449 | Naive_DateTimeOffsetExact      |

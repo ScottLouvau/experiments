@@ -1,5 +1,5 @@
 use std::{time::Instant, error::Error};
-use datetime_parse::*;
+use datetime_parse::variations::*;
 
 fn time<T>(name: &str, f: impl Fn() -> Result<T, Box<dyn Error>>) -> Result<(), Box<dyn Error>> {
     let mut iterations = 0;
@@ -13,7 +13,7 @@ fn time<T>(name: &str, f: impl Fn() -> Result<T, Box<dyn Error>>) -> Result<(), 
     }
     
     let duration: u128 = start.elapsed().as_millis() / iterations;
-    println!("| {duration:>5} | {name:20} |");
+    println!("| {duration:>5} | {name:30} |");
 
     Ok(())
 }
@@ -21,17 +21,20 @@ fn time<T>(name: &str, f: impl Fn() -> Result<T, Box<dyn Error>>) -> Result<(), 
 fn run_all() -> Result<(), Box<dyn Error>> {
     let file_path = "./Sample.DatesOnly.log";
     
-    println!("|    ms | Name                 |");
-    println!("| ----- | -------------------- |");
+    println!("|    ms | Rust                           |");
+    println!("| ----- | ------------------------------ |");
 
-    time("original", || original(file_path))?;
-    time("read_by_line", || read_by_line(file_path))?;
+    
+    time("Original", || original(file_path))?;
     time("span", || span(file_path))?;
-    time("parse_custom", || parse_custom(file_path))?;
-    time("blocks_parse_custom", || blocks_parse_custom(file_path))?;
+    // time("parse_custom", || parse_custom(file_path))?;
+    // time("blocks_parse_custom", || blocks_parse_custom(file_path))?;
 
-    time("custom", || parse_custom(file_path))?;
-    time("custom_noerrors", || parse_noerrors(file_path))?;
+    time("Custom", || custom(file_path))?;
+    time("Custom NoErrors", || custom_noerrors(file_path))?;
+
+    time("Naive Rust", || naive_rust(file_path))?;
+    time("Naive ReadLine", || naive_readline(file_path))?;
 
     Ok(())
 }
