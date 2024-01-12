@@ -1,40 +1,59 @@
 use std::{time::Instant, error::Error};
+use chrono::{DateTime, FixedOffset};
 use datetime_parse::variations::*;
 
-fn time<T>(name: &str, f: impl Fn() -> Result<T, Box<dyn Error>>) -> Result<(), Box<dyn Error>> {
+fn time<T>(name: &str, parse: impl Fn() -> Result<T, Box<dyn Error>>, check: impl Fn(T) -> u64) -> Result<(), Box<dyn Error>> {
     let mut iterations = 0;
     let start = Instant::now();
-    
-    for _ in 0..10 {
-        f()?;
 
-        iterations += 1;
+    let mut result = parse()?;
+    iterations += 1;
+    
+    for _ in 1..10 {
         if start.elapsed().as_millis() > 1500u128 { break; }
+
+        result = parse()?;
+        iterations += 1;
     }
     
     let duration: u128 = start.elapsed().as_millis() / iterations;
-    println!("| {duration:>5} | {name:30} |");
+    let check_millis = check(result);
+
+    println!("| {duration:>5} | {name:30} | {check_millis:>10} |");
 
     Ok(())
 }
 
+fn sum_datetime(dates: Vec<DateTime<FixedOffset>>) -> u64 {
+    let mut sum = 0u64;
+    for date in dates {
+        sum += date.timestamp_subsec_millis() as u64;
+    }
+    sum
+}
+
+fn sum_custom(dates: Vec<MyDateTime>) -> u64 {
+    let mut sum = 0u64;
+    for date in dates {
+        sum += (date.nanoseconds / 1000000) as u64;
+    }
+    sum
+}
+
 fn run_all() -> Result<(), Box<dyn Error>> {
-    let file_path = "./Sample.DatesOnly.log";
+    let file_path = "../Sample.DatesOnly.log";
     
-    println!("|    ms | Rust                           |");
-    println!("| ----- | ------------------------------ |");
+    println!("|    ms | Rust                           | SumMillis  |");
+    println!("| ----- | ------------------------------ | ---------- |");
 
-    
-    time("Original", || original(file_path))?;
-    time("span", || span(file_path))?;
-    // time("parse_custom", || parse_custom(file_path))?;
-    // time("blocks_parse_custom", || blocks_parse_custom(file_path))?;
-
-    time("Custom", || custom(file_path))?;
-    time("Custom NoErrors", || custom_noerrors(file_path))?;
-
-    time("Naive Rust", || naive_rust(file_path))?;
-    time("Naive ReadLine", || naive_readline(file_path))?;
+    time("Naive Rust", || naive_rust(file_path), sum_datetime)?;
+    time("Naive ReadLine", || naive_readline(file_path), sum_datetime)?;
+    time("String Iterator, Custom Parse", || string_iterator_custom_parse(file_path), sum_custom)?;
+    time("String, Custom Parse", || string_custom_parse(file_path), sum_custom)?;
+    time("Bytes, Custom Parse", || bytes_custom_parse(file_path), sum_custom)?;
+    time("Block Read, Custom Parse", || blocks_custom_parse(file_path), sum_custom)?;
+    time("Split at Length, Custom Parse", || known_length_custom(file_path), sum_custom)?;
+    time("Split at Length, No Validation", || custom_noerrors(file_path), sum_custom)?;
 
     Ok(())
 }

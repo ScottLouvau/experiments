@@ -18,6 +18,26 @@ public static class ParseVariations
 
     // ---- Naive Implementations ----
 
+    // My actual original code.
+    public static IList<DateTime> My_Real_First(string filePath)
+    {
+        using (StreamReader r = File.OpenText(filePath))
+        {
+            List<DateTime> results = new List<DateTime>();
+
+            while (true)
+            {
+                string? line = r.ReadLine();
+                if (line == null) { break; }
+
+                DateTime value = DateTime.Parse(line).ToUniversalTime();
+                results.Add(value);
+            }
+
+            return results;
+        }
+    }
+
     // My guess about the most likely first C# implemetation.
     public static IList<DateTime> Naive_CS(string filePath)
     {
@@ -58,6 +78,7 @@ public static class ParseVariations
     }
 
     // Returns DateTimeKind.Local, but about twice as fast without DateTimeStyles.AdjustToUniversal
+    // It's weird that internally DateTime.ParseExact can't avoid converting to local time and back.
     public static IList<DateTime> Naive_ParseExactButNotUtc(string filePath)
     {
         List<DateTime> results = new List<DateTime>();
@@ -127,6 +148,9 @@ public static class ParseVariations
         }
     }
 
+    // Read as bytes, avoiding UTF-16 conversion and UTF-8 validation.
+    // Split at known length, avoiding newline searches.
+    // Use built-in functions to parse each number.
     public static IList<DateTime> Custom(string filePath)
     {
         using (Stream stream = File.OpenRead(filePath))
@@ -171,6 +195,7 @@ public static class ParseVariations
         }
     }
 
+    // Same as Custom, but use my own number parsing function.
     public static IList<DateTime> Custom_MyParse(string filePath)
     {
         using (Stream stream = File.OpenRead(filePath))
@@ -231,6 +256,7 @@ public static class ParseVariations
         return result;
     }
 
+    // Same as custom, but remove verifying the digits are in range, unroll the digit parsing, and inline the parsing function
     public static IList<DateTime> Custom_NoErrors(string filePath)
     {
         using (Stream stream = File.OpenRead(filePath))

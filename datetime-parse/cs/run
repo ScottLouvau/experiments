@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# Test with 8.0, 7.0, 6.0 frameworks
+dotnet run -c Release -f net8.0
+dotnet run -c Release -f net7.0
+dotnet run -c Release -f net6.0
