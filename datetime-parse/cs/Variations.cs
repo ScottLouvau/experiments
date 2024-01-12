@@ -2,35 +2,95 @@ using System.Buffers.Text;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
+/// <summary>
+///  Variations parsing DateTimes in a file.
+///  
+///  Uses 'O' DateTime format, which is 28 bytes, delimited with bare newlines (\n), for 29 bytes per line.
+///    2022-04-14T02:32:53.4028225Z
+///    **** ** ** ** ** ** *******
+///    0123456789012345678901234567
+/// </summary>
 public static class ParseVariations
 {
+    // Known lengths of each value and line.
     public const int ValueLength = 28;
-    public readonly static int LineLength = ValueLength + Environment.NewLine.Length;
-    
-    // ---- Contenders ----
+    public const int LineLength = 29;
 
-    public static IList<DateTime> Original(string filePath)
+    // ---- Naive Implementations ----
+
+    // My guess about the most likely first C# implemetation.
+    public static IList<DateTime> Naive_CS(string filePath)
     {
-        using (StreamReader r = File.OpenText(filePath))
+        // 594k views, first result for "C# read file lines":
+        // https://stackoverflow.com/questions/8037070/whats-the-fastest-way-to-read-a-text-file-line-by-line
+
+        // 449k views, first result for "C# parse datetime":
+        // https://stackoverflow.com/questions/5366285/how-to-parse-strings-to-datetime-in-c-sharp-properly
+
+        // Need 'AdjustToUniversal' to get Utc DateTimes out.
+
+        List<DateTime> results = new List<DateTime>();
+
+        var lines = File.ReadLines(filePath);
+        foreach (string line in lines)
         {
-            List<DateTime> results = new List<DateTime>();
-
-            while (true)
-            {
-                string? line = r.ReadLine();
-                if (line == null) { break; }
-
-                // 2-3x slower if format has to be detected
-                //DateTimeOffset value = DateTimeOffset.Parse(line);
-
-                DateTimeOffset value = DateTimeOffset.ParseExact(line, "O", CultureInfo.InvariantCulture);
-                results.Add(value.UtcDateTime);
-            }
-
-            return results;
+            DateTime value = DateTime.ParseExact(line, "O", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
+            results.Add(value);
         }
+
+        return results;
     }
 
+    // Closest equivalent to Rust Naive implementation, where reading files by lines isn't as obvious.
+    public static IList<DateTime> Naive_RustNaiveClosest(string filePath)
+    {
+        List<DateTime> results = new List<DateTime>();
+
+        string text = File.ReadAllText(filePath);
+        foreach (string line in text.Split("\n")) {
+            if (line.Length == 0) { break; }
+
+            DateTime value = DateTime.ParseExact(line, "O", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
+            results.Add(value);
+        }
+
+        return results;
+    }
+
+    // Returns DateTimeKind.Local, but about twice as fast without DateTimeStyles.AdjustToUniversal
+    public static IList<DateTime> Naive_ParseExactButNotUtc(string filePath)
+    {
+        List<DateTime> results = new List<DateTime>();
+
+        var lines = File.ReadLines(filePath);
+        foreach (string line in lines)
+        {
+            DateTime value = DateTime.ParseExact(line, "O", CultureInfo.InvariantCulture);//, DateTimeStyles.AdjustToUniversal);
+            results.Add(value);
+        }
+
+        return results;
+    }
+
+    // Modern Naive choice: ReadLines and DateTimeOffset.ParseExact, which both perform well.
+    public static IList<DateTime> Naive_DateTimeOffset(string filePath)
+    {
+        List<DateTime> results = new List<DateTime>();
+
+        var lines = File.ReadLines(filePath);
+        foreach (string line in lines) 
+        {
+            DateTimeOffset value = DateTimeOffset.ParseExact(line, "O", CultureInfo.InvariantCulture);
+            results.Add(value.UtcDateTime);
+        }
+
+        return results;
+    }
+
+    // ---- Optimized Implementations ----
+
+    // Read in blocks into Span<char> and use DateTimeOffset.ParseExact.
+    // This avoids creating a string per line.
     public static IList<DateTime> Span(string filePath)
     {
         using (StreamReader r = File.OpenText(filePath))
@@ -228,101 +288,5 @@ public static class ParseVariations
 
         value = value.AddTicks(subseconds);
         return value;
-    }
-
-    // ---- Naive Implementations ----
-
-    public static IList<DateTime> Naive_RustNaiveClosest(string filePath)
-    {
-        List<DateTime> results = new List<DateTime>();
-        string text = File.ReadAllText(filePath);
-
-        foreach (string line in text.Split("\n")) {
-            if (line.Length == 0) { break; }
-
-            DateTime value = DateTime.ParseExact(line, "O", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
-            results.Add(value);
-        }
-
-        return results;
-    }
-
-    public static IList<DateTime> Naive_DateTimeParse(string filePath)
-    {
-        using (StreamReader r = File.OpenText(filePath))
-        {
-            List<DateTime> results = new List<DateTime>();
-
-            while (true)
-            {
-                string? line = r.ReadLine();
-                if (line == null) { break; }
-
-                DateTime value = DateTime.Parse(line).ToUniversalTime();
-                results.Add(value);
-            }
-
-            return results;
-        }
-    }
-
-    public static IList<DateTime> Naive_ParseExactButNotUtc(string filePath)
-    {
-        using (StreamReader r = File.OpenText(filePath))
-        {
-            List<DateTime> results = new List<DateTime>();
-
-            while (true)
-            {
-                string? line = r.ReadLine();
-                if (line == null) { break; }
-
-                // Fast [~2,550 ms], but returns adjusted to DateTimeKind.Local. Adding DateTimeStyles.AdjustToUniversal makes it much slower [~5,875 ms].
-                DateTime value = DateTime.ParseExact(line, "O", CultureInfo.InvariantCulture);//, DateTimeStyles.AdjustToUniversal);
-
-                results.Add(value);
-            }
-
-            return results;
-        }
-    }
-
-    public static IList<DateTime> Naive_ParseExactUtcSlow(string filePath)
-    {
-        using (StreamReader r = File.OpenText(filePath))
-        {
-            List<DateTime> results = new List<DateTime>();
-
-            while (true)
-            {
-                string? line = r.ReadLine();
-                if (line == null) { break; }
-
-                DateTime value = DateTime.ParseExact(line, "O", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
-
-                results.Add(value);
-            }
-
-            return results;
-        }
-    }
-
-    public static IList<DateTime> Naive_DateTimeOffsetExact(string filePath)
-    {
-        using (StreamReader r = File.OpenText(filePath))
-        {
-            List<DateTime> results = new List<DateTime>();
-
-            while (true)
-            {
-                string? line = r.ReadLine();
-                if (line == null) { break; }
-
-                DateTimeOffset value = DateTimeOffset.ParseExact(line, "O", CultureInfo.InvariantCulture);
-                results.Add(value.UtcDateTime);
-            }
-
-            return results;
-        }
     }
 }

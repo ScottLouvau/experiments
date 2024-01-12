@@ -84,10 +84,14 @@ namespace DateTimeParse
 
         public static void RunAll()
         {
+            // Generate the input file if it doesn't exist yet
             if (!File.Exists(DateTimesPath)) { 
                 Console.WriteLine("Generating DateTime data file...");
                 WriteSampleFile(DateTimesPath); 
             }
+
+            // Read the input file once to get 'warm' read times
+            File.ReadAllText(DateTimesPath);
 
             Dictionary<string, Func<string, IList<DateTime>>> methods = Reflect();
 
