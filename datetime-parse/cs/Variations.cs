@@ -1,6 +1,7 @@
 using System.Buffers.Text;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Xml;
 
 /// <summary>
 ///  Variations parsing DateTimes in a file.
@@ -19,7 +20,7 @@ public static class ParseVariations
     // ---- Naive Implementations ----
 
     // My actual original code.
-    public static IList<DateTime> My_Real_First(string filePath)
+    public static IList<DateTime> DateTimeParse(string filePath)
     {
         using (StreamReader r = File.OpenText(filePath))
         {
@@ -39,7 +40,7 @@ public static class ParseVariations
     }
 
     // My guess about the most likely first C# implemetation.
-    public static IList<DateTime> Naive_CS(string filePath)
+    public static IList<DateTime> DateTimeParseExact(string filePath)
     {
         // 594k views, first result for "C# read file lines":
         // https://stackoverflow.com/questions/8037070/whats-the-fastest-way-to-read-a-text-file-line-by-line
@@ -62,7 +63,7 @@ public static class ParseVariations
     }
 
     // Closest equivalent to Rust Naive implementation, where reading files by lines isn't as obvious.
-    public static IList<DateTime> Naive_RustNaiveClosest(string filePath)
+    public static IList<DateTime> RustNaiveClosest(string filePath)
     {
         List<DateTime> results = new List<DateTime>();
 
@@ -79,7 +80,7 @@ public static class ParseVariations
 
     // Returns DateTimeKind.Local, but about twice as fast without DateTimeStyles.AdjustToUniversal
     // It's weird that internally DateTime.ParseExact can't avoid converting to local time and back.
-    public static IList<DateTime> Naive_ParseExactButNotUtc(string filePath)
+    public static IList<DateTime> DateTimeParseExactNotUtc(string filePath)
     {
         List<DateTime> results = new List<DateTime>();
 
@@ -94,7 +95,7 @@ public static class ParseVariations
     }
 
     // Modern Naive choice: ReadLines and DateTimeOffset.ParseExact, which both perform well.
-    public static IList<DateTime> Naive_DateTimeOffset(string filePath)
+    public static IList<DateTime> DateTimeOffsetParseExact(string filePath)
     {
         List<DateTime> results = new List<DateTime>();
 
@@ -112,7 +113,7 @@ public static class ParseVariations
 
     // Read in blocks into Span<char> and use DateTimeOffset.ParseExact.
     // This avoids creating a string per line.
-    public static IList<DateTime> Span(string filePath)
+    public static IList<DateTime> SpanOfChar(string filePath)
     {
         using (StreamReader r = File.OpenText(filePath))
         {
@@ -151,7 +152,56 @@ public static class ParseVariations
     // Read as bytes, avoiding UTF-16 conversion and UTF-8 validation.
     // Split at known length, avoiding newline searches.
     // Use built-in functions to parse each number.
-    public static IList<DateTime> Custom(string filePath)
+    public static IList<DateTime> BytesAndCustomParse(string filePath)
+    {
+        using (Stream stream = File.OpenRead(filePath))
+        {
+            int count = (int)((stream.Length - stream.Position) / LineLength);
+            List<DateTime> results = new List<DateTime>(count);
+
+            Span<byte> buffer = new Span<byte>(new byte[LineLength * 2048]);
+
+            long length = stream.Length;
+            while (stream.Position < length)
+            {
+                int lengthRead = stream.Read(buffer);
+                Span<byte> block = buffer.Slice(0, lengthRead);
+
+                while (block.Length > 0)
+                {
+                    int newline = block.IndexOf((byte)'\n');
+                    Span<byte> t = block.Slice(0, newline);
+
+                    int unused = 0;
+                    bool success = true;
+
+                    // Parse and build DateTime from integer parts (year, month, day, ...)
+                    success &= Utf8Parser.TryParse(t.Slice(0, 4), out int year, out unused);
+                    success &= Utf8Parser.TryParse(t.Slice(5, 2), out int month, out unused);
+                    success &= Utf8Parser.TryParse(t.Slice(8, 2), out int day, out unused);
+                    success &= Utf8Parser.TryParse(t.Slice(11, 2), out int hour, out unused);
+                    success &= Utf8Parser.TryParse(t.Slice(14, 2), out int minute, out unused);
+                    success &= Utf8Parser.TryParse(t.Slice(17, 2), out int second, out unused);
+                    success &= Utf8Parser.TryParse(t.Slice(20, 7), out int ticks, out unused);
+
+                    DateTime value = new DateTime(year, month, day, hour, minute, second, DateTimeKind.Utc);
+                    value = value.AddTicks(ticks);
+
+                    if (!success) throw new FormatException("...");
+
+                    results.Add(value);
+                    block = block.Slice(newline + 1);
+                }
+            }
+
+            return results;
+        }
+    }
+
+    // Read as bytes, avoiding UTF-16 conversion and UTF-8 validation.
+    // Split at known length, avoiding newline searches.
+    // Use built-in functions to parse each number.
+    public static IList<DateTime> KnownLengthSplitAndCustomParse(string filePath)
     {
         using (Stream stream = File.OpenRead(filePath))
         {
@@ -315,4 +365,25 @@ public static class ParseVariations
         value = value.AddTicks(subseconds);
         return value;
     }
+
+    // ---- Experiments ----
+
+    // // 45 ms; how much for the I/O only?
+    // public static IList<DateTime> ReadBytesOnly(string filePath)
+    // {
+    //     File.ReadAllBytes(filePath);
+    //     return new List<DateTime>();
+    // }
+
+    // // 240 ms; How much to read, convert to UTF-16, and split on line?
+    // public static IList<DateTime> ReadLineOnly(string filePath)
+    // {
+    //     var lines = File.ReadLines(filePath);
+    //     foreach (string line in lines)
+    //     {
+    //         // Read Line only
+    //     }
+
+    //     return new List<DateTime>();
+    // }
 }

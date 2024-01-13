@@ -107,7 +107,7 @@ pub fn known_length_custom(file_path: &str) -> Result<Vec<MyDateTime>, Box<dyn E
     Ok(result)
 }
 
-// 105 ms; No validation that digits are in range
+// 100 ms; No validation that digits are in range
 pub fn custom_noerrors(file_path: &str)  -> Result<Vec<MyDateTime>, Box<dyn Error>> {
     let mut result = Vec::new();
 
@@ -120,7 +120,8 @@ pub fn custom_noerrors(file_path: &str)  -> Result<Vec<MyDateTime>, Box<dyn Erro
         if length_read < 29 { break; }
 
         while buffer.len() >= 29 {
-            let dt = MyDateTime::parse_noerrors(&buffer[0..28]).expect("DateTime Parse Error");
+            // 110 ms: let dt = MyDateTime::parse_noerrors(&buffer[0..28]).expect("DateTime Parse Error");
+            let dt = MyDateTime::parse_unrolled(&buffer[0..28]).expect("DateTime Parse Error");
             result.push(dt);
 
             buffer = &buffer[29..];
@@ -203,14 +204,16 @@ impl MyDateTime {
         let second = 10 * t[17] as u16 + t[18] as u16 - 11 * ZERO as u16;
 
         let nanoseconds = 
-            100000000 * t[20] as u32 
-            + 10000000 * t[21] as u32 
-            + 1000000 * t[22] as u32 
-            + 100000 * t[23] as u32 
-            + 10000 * t[24] as u32 
-            + 1000 * t[25] as u32 
-            + 100 * t[26] as u32 
-            - 1111111 * ZERO as u32;
+            100000000 * t[20] as u64 
+            + 10000000 * t[21] as u64 
+            + 1000000 * t[22] as u64 
+            + 100000 * t[23] as u64 
+            + 10000 * t[24] as u64 
+            + 1000 * t[25] as u64 
+            + 100 * t[26] as u64 
+            - 111111100 * ZERO as u64;
+
+        let nanoseconds = nanoseconds as u32;
 
         Some(MyDateTime { year: year, month, day, hour, minute, second, nanoseconds })
     }
