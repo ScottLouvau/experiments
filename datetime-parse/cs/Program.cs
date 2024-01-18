@@ -96,6 +96,9 @@ namespace DateTimeParse
             if (!File.Exists(DateTimesPath)) { 
                 Console.WriteLine("Generating DateTime data file...");
                 WriteSampleFile(DateTimesPath); 
+                
+                Console.WriteLine("Done. Run again to run benchmarks.");
+                return;
             }
 
             // Read the input file once to get 'warm' read times
