@@ -17,6 +17,8 @@ namespace DateTimeParse
     /// </remarks>
     public static class Program
     {
+        public const string LogToPath = @"DotNet.log";
+
         // One folder up from executable or current folder; should be the 'datetime-parse' shared folder for 'dotnet run' or built .dll or .exe
         public const string DateTimesPath = @"../Sample.DatesOnly.log";
 
@@ -34,6 +36,12 @@ namespace DateTimeParse
                     current = current.AddMilliseconds(10000 * r.NextDouble() * r.NextDouble());
                 }
             }
+        }
+
+        public static void WriteLine(string message = "")
+        {
+            Console.WriteLine(message);
+            File.AppendAllText(LogToPath, message + Environment.NewLine);
         }
 
         public static IList<System.DateTime> Time(Func<IList<System.DateTime>> action, string name)
@@ -58,7 +66,7 @@ namespace DateTimeParse
             long check = result.Sum((dt) => (long)dt.TimeOfDay.Milliseconds);
 
             // Log the runtime, method name, count loaded, and milliseconds-sum-mod-10000
-            Console.WriteLine($"| {average.ToString("n0").PadLeft(5)} | {name.PadRight(30)} | {check} |");
+            WriteLine($"| {name.PadRight(30)} | {average.ToString("n0").PadLeft(5)} | {check} |");
 
             return result;
         }
@@ -93,11 +101,17 @@ namespace DateTimeParse
             // Read the input file once to get 'warm' read times
             File.ReadAllText(DateTimesPath);
 
+            // Delete the timings log if it already exists
+            if (File.Exists(LogToPath)) {
+                File.Delete(LogToPath);
+            }
+
+            // Find and run all variations
             Dictionary<string, Func<string, IList<DateTime>>> methods = Reflect();
 
-            Console.WriteLine();
-            Console.WriteLine($"|    ms | .NET {System.Environment.Version,-25} | SumMillis  |");
-            Console.WriteLine("| ----- | ------------------------------ | ---------- |");
+            WriteLine();
+            WriteLine($"| .NET {System.Environment.Version,-25} |    ms | SumMillis  |");
+            WriteLine("| ------------------------------ | ----- | ---------- |");
 
             foreach (string name in methods.Keys)
             {

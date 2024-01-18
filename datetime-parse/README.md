@@ -162,6 +162,20 @@ MacOS 14.2.1
 |   462 | Custom_MyParse                 | 4995071171 |
 |   116 | Custom_NoErrors                | 4995071171 |
 
+
+On M1 MacBook Pro, within Docker, on rust:latest image.
+
+|    ms | Rust                           | SumMillis  |
+| ----- | ------------------------------ | ---------- |
+|  1150 | Rust Naive                     | 4995071171 |
+|  1307 | Rust Naive ReadLine            | 4995071171 |
+|   412 | Rust String Iter, Custom Parse | 4995071171 |
+|   397 | Rust String, Custom Parse      | 4995071171 |
+|   296 | Rust All Bytes, Custom Parse   | 4995071171 |
+|   180 | BytesAndCustomParse            | 4995071171 |
+|    91 | Custom_MyParse                 | 4995071171 |
+|    78 | Custom_NoErrors                | 4995071171 |
+
 ## Issues
 
 In Rust, the most commonly shown way to read a file by line is creating a separate string per line. 

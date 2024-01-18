@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Run a Shell to manually run commands
+# docker run --entrypoint=sh -it --rm scottlouvau/datetime-dotnet8
+
+# Run the benchmarks again for the image as already built
+# docker run -it --rm scottlouvau/datetime-rust cargo run --release
+# docker run -it --rm scottlouvau/datetime-dotnet8 dotnet run -c Release -t net8.0
+
+docker build -t scottlouvau/datetime-rust --no-cache -f Dockerfile-Rust .
+docker create --name extractor scottlouvau/datetime-rust
+docker cp extractor:/usr/local/src/rs/Rust.log ./Rust.log
+docker rm -f extractor
+
+docker build -t scottlouvau/datetime-dotnet8 --build-arg RT_VERSION=8.0 --no-cache -f Dockerfile-DotNet .
+docker create --name extractor scottlouvau/datetime-dotnet8
+docker cp extractor:/usr/local/src/cs/DotNet.log ./DotNet8.log
+docker rm -f extractor
+
+docker build -t scottlouvau/datetime-dotnet7 --build-arg RT_VERSION=7.0 --no-cache -f Dockerfile-DotNet .
+docker create --name extractor scottlouvau/datetime-dotnet7
+docker cp extractor:/usr/local/src/cs/DotNet.log ./DotNet7.log
+docker rm -f extractor
+
+docker build -t scottlouvau/datetime-dotnet6 --build-arg RT_VERSION=6.0 --no-cache -f Dockerfile-DotNet .
+docker create --name extractor scottlouvau/datetime-dotnet6
+docker cp extractor:/usr/local/src/cs/DotNet.log ./DotNet6.log
+docker rm -f extractor

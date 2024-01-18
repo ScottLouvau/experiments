@@ -2,6 +2,10 @@
 Sample.DatesOnly.log
 Sample.DatesOnly.bin
 
+# Ignore performance logs
+DotNet*.log
+Rust.log
+
 # Ignore custom output folders
 cs-bin/
 cs-pub/

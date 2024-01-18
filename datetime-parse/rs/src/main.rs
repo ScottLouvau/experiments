@@ -1,6 +1,10 @@
-use std::{time::Instant, error::Error};
+use std::{time::Instant, error::Error, io::Write, fs};
 use chrono::{DateTime, FixedOffset};
 use datetime_parse::variations::*;
+use rustc_version_runtime::version;
+
+const DATETIMES_PATH: &str = "../Sample.DatesOnly.log";
+const LOG_TO_PATH: &str = "./Rust.log";
 
 fn time<T>(name: &str, parse: impl Fn() -> Result<T, Box<dyn Error>>, check: impl Fn(T) -> u64) -> Result<(), Box<dyn Error>> {
     let mut iterations = 0;
@@ -19,7 +23,7 @@ fn time<T>(name: &str, parse: impl Fn() -> Result<T, Box<dyn Error>>, check: imp
     let duration: u128 = start.elapsed().as_millis() / iterations;
     let check_millis = check(result);
 
-    println!("| {duration:>5} | {name:30} | {check_millis:>10} |");
+    write_line(&format!("| {name:30} | {duration:>5} | {check_millis:>10} |"));
 
     Ok(())
 }
@@ -40,20 +44,39 @@ fn sum_custom(dates: Vec<MyDateTime>) -> u64 {
     sum
 }
 
-fn run_all() -> Result<(), Box<dyn Error>> {
-    let file_path = "../Sample.DatesOnly.log";
-    
-    println!("|    ms | Rust                           | SumMillis  |");
-    println!("| ----- | ------------------------------ | ---------- |");
+fn write_line(value: &str) {
+    println!("{}", value);
 
-    time("Rust Naive", || naive_rust(file_path), sum_datetime)?;
-    time("Rust Naive ReadLine", || naive_readline(file_path), sum_datetime)?;
-    time("Rust String Iter, Custom Parse", || string_iterator_custom_parse(file_path), sum_custom)?;
-    time("Rust String, Custom Parse", || string_custom_parse(file_path), sum_custom)?;
-    time("Rust All Bytes, Custom Parse", || bytes_custom_parse(file_path), sum_custom)?;
-    time("BytesAndCustomParse", || blocks_custom_parse(file_path), sum_custom)?;
-    time("Custom_MyParse", || known_length_custom(file_path), sum_custom)?;
-    time("Custom_NoErrors", || custom_noerrors(file_path), sum_custom)?;
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(LOG_TO_PATH)
+        .unwrap();
+
+    write!(file, "{}\n", value).unwrap();
+}
+
+fn run_all() -> Result<(), Box<dyn Error>> {
+    // Read the input file once to get 'warm' read times
+    let _ = fs::read_to_string(DATETIMES_PATH)?;
+
+    // Delete the timings log if it already exists
+    if fs::metadata(LOG_TO_PATH).is_ok() {
+        fs::remove_file(LOG_TO_PATH)?; 
+    }
+
+    write_line("");
+    write_line(&format!("| Rust {:25} |    ms | SumMillis  |", version()));
+    write_line("| ------------------------------ | ----- | ---------- |");
+
+    time("Rust Naive", || naive_rust(DATETIMES_PATH), sum_datetime)?;
+    time("Rust Naive ReadLine", || naive_readline(DATETIMES_PATH), sum_datetime)?;
+    time("Rust String Iter, Custom Parse", || string_iterator_custom_parse(DATETIMES_PATH), sum_custom)?;
+    time("Rust String, Custom Parse", || string_custom_parse(DATETIMES_PATH), sum_custom)?;
+    time("Rust All Bytes, Custom Parse", || bytes_custom_parse(DATETIMES_PATH), sum_custom)?;
+    time("BytesAndCustomParse", || blocks_custom_parse(DATETIMES_PATH), sum_custom)?;
+    time("Custom_MyParse", || known_length_custom(DATETIMES_PATH), sum_custom)?;
+    time("Custom_NoErrors", || custom_noerrors(DATETIMES_PATH), sum_custom)?;
 
     Ok(())
 }

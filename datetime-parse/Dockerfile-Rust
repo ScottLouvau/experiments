@@ -1,0 +1,11 @@
+
+FROM rust:latest
+
+WORKDIR /usr/local/src
+COPY ./Sample.DatesOnly.log ./
+COPY ./rs/Cargo.lock ./rs/Cargo.toml ./rs/
+COPY ./rs/src ./rs/src
+
+WORKDIR /usr/local/src/rs
+RUN cargo --version --verbose
+RUN cargo run --release
