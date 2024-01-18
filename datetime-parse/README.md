@@ -12,6 +12,8 @@ The code parses a text file with 10M DateTimes in "2022-04-14T02:32:53.4028225Z"
 
 You can extend the runtime and iteration limit in the Time() methods in each codebase to get more accurate numbers, but I chose relatively short runtimes because I iterated on the code many times and didn't want to wait minutes to see the results.
 
+My C# and Rust versions both output Markdown-style tables with the results. I've given variations that are reasonably equivalent the same name in both languages. Others are logical steps from naive to optimized but not really directly comparable.
+
 ## Summary
 
 It's hard to give a simple answer about whether Rust or C# was faster in this comparison.
@@ -21,6 +23,27 @@ If you try a naive implementation, Rust's chrono::DateTime::parse_from_rfc3339 w
 Near the end of my optimizations, Rust pulled distinctly ahead. Reading the file in blocks of bytes, looking for newlines, and parsing in custom code took 210 ms in Rust versus 300 ms in C#. Avoiding looking for newlines by splitting at a known length took 115 ms in Rust vs. 200 ms in in C#. However, my not-safe-for-production, fully unrolled, no error checking version came out very similar, at 95 ms for each.
 
 My conclusion was that I'm likely to be able to get Rust to run distinctly faster in tuned, custom code. The built-in APIs I used in this example aren't as well tuned as C#'s newer types, which eliminated a lot of the benefit.
+
+### Merged Results
+M1 MacBook Pro, 16GB RAM, 512GB SSD, 8-core CPU, 14-core GPU
+MacOS 14.2.1. Rust 1.74.0, .NET 8.0.0, .NET 7.0.14, .NET 6.0.25
+
+| Variation                      | Rust  | NET 8 | NET 7 | NET 6 |
+| ------------------------------ | ----- | ----- | ----- | ----- |
+| DateTimeParse                  |       | 3,314 | 3,445 | 4,117 |
+| DateTimeParseExact             |       | 2,087 | 2,768 | 3,462 |
+| Rust Naive                     | 1,017 | 3,504 | 3,513 | 4,104 |
+| Rust Naive ReadLine            | 1,316 |       |       |       |
+| Rust String Iter, Custom Parse |   427 |       |       |       |
+| Rust String, Custom Parse      |   401 |       |       |       |
+| DateTimeParseExactNotUtc       |       | 1,098 | 1,352 | 1,535 |
+| DateTimeOffsetParseExact       |       |   510 |   897 |   846 |
+| SpanOfChar                     |       |   313 |   424 |   538 |
+| Rust All Bytes, Custom Parse   |   297 |       |       |       |
+| BytesAndCustomParse            |   206 |   300 |   328 |   500 |
+| KnownLengthSplitAndCustomParse |       |   255 |   296 |   376 |
+| Custom_MyParse                 |   115 |   200 |   490 |   462 |
+| Custom_NoErrors                |    95 |    95 |   100 |   116 |
 
 ## Details
 
@@ -83,18 +106,19 @@ Major Performance Components:
 - Analyze assembly for the fastest versions to look for key differences.
 
 ## Current Results
-M1 MacBook Pro, 16GB RAM, 512GB SSD, 8-core CPU, 14-core GPU; MacOS 14.2.1
+M1 MacBook Pro, 16GB RAM, 512GB SSD, 8-core CPU, 14-core GPU
+MacOS 14.2.1
 
 |    ms | Rust 1.74.0                    | SumMillis  |
 | ----- | ------------------------------ | ---------- |
 |  1017 | Naive Rust                     | 4995071171 |
-|  1316 | Naive ReadLine                 | 4995071171 |
-|   427 | String Iterator, Custom Parse  | 4995071171 |
-|   401 | String, Custom Parse           | 4995071171 |
-|   297 | Bytes, Custom Parse            | 4995071171 |
-|   206 | Block Read, Custom Parse       | 4995071171 |
-|   115 | Split at Length, Custom Parse  | 4995071171 |
-|    95 | Split at Length, No Validation | 4995071171 |
+|  1316 | Naive Rust ReadLine            | 4995071171 |
+|   427 | Rust String Iter, Custom Parse | 4995071171 |
+|   401 | Rust String, Custom Parse      | 4995071171 |
+|   297 | Rust All Bytes, Custom Parse   | 4995071171 |
+|   206 | BytesAndCustomParse            | 4995071171 |
+|   115 | Custom_MyParse                 | 4995071171 |
+|    95 | Custom_NoErrors                | 4995071171 |
 
 
 |    ms | .NET 8.0.0                     | SumMillis  |

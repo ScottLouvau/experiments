@@ -46,14 +46,14 @@ fn run_all() -> Result<(), Box<dyn Error>> {
     println!("|    ms | Rust                           | SumMillis  |");
     println!("| ----- | ------------------------------ | ---------- |");
 
-    time("Naive Rust", || naive_rust(file_path), sum_datetime)?;
-    time("Naive ReadLine", || naive_readline(file_path), sum_datetime)?;
-    time("String Iterator, Custom Parse", || string_iterator_custom_parse(file_path), sum_custom)?;
-    time("String, Custom Parse", || string_custom_parse(file_path), sum_custom)?;
-    time("Bytes, Custom Parse", || bytes_custom_parse(file_path), sum_custom)?;
-    time("Block Read, Custom Parse", || blocks_custom_parse(file_path), sum_custom)?;
-    time("Split at Length, Custom Parse", || known_length_custom(file_path), sum_custom)?;
-    time("Split at Length, No Validation", || custom_noerrors(file_path), sum_custom)?;
+    time("Rust Naive", || naive_rust(file_path), sum_datetime)?;
+    time("Rust Naive ReadLine", || naive_readline(file_path), sum_datetime)?;
+    time("Rust String Iter, Custom Parse", || string_iterator_custom_parse(file_path), sum_custom)?;
+    time("Rust String, Custom Parse", || string_custom_parse(file_path), sum_custom)?;
+    time("Rust All Bytes, Custom Parse", || bytes_custom_parse(file_path), sum_custom)?;
+    time("BytesAndCustomParse", || blocks_custom_parse(file_path), sum_custom)?;
+    time("Custom_MyParse", || known_length_custom(file_path), sum_custom)?;
+    time("Custom_NoErrors", || custom_noerrors(file_path), sum_custom)?;
 
     Ok(())
 }
