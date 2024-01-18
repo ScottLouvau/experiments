@@ -101,12 +101,12 @@ Major Performance Components:
 - Time Zone Correction
 
 ## TODO
-- Make Dockerfiles to make it easy to run across platforms.
-- Try on x64.
 - Analyze assembly for the fastest versions to look for key differences.
 
 ## Current Results
-M1 MacBook Pro, 16GB RAM, 512GB SSD, 8-core CPU, 14-core GPU
+
+### 2021 M1 MacBook Pro
+8-core CPU, 14-core GPU, 16GB RAM, 512GB SSD
 MacOS 14.2.1
 
 |    ms | Rust 1.74.0                    | SumMillis  |
@@ -175,6 +175,60 @@ On M1 MacBook Pro, within Docker, on rust:latest image.
 |   180 | BytesAndCustomParse            | 4995071171 |
 |    91 | Custom_MyParse                 | 4995071171 |
 |    78 | Custom_NoErrors                | 4995071171 |
+
+### 2020 Lenovo IdeaPad Flex 5 (14ARE05)
+Ryzen 4700U (8 core, 8 thread, 4.1 GHz), 16 GB DDR4-3200, 512 GB NVMe SSD
+Ubuntu 22.04.3 LTS
+
+| Rust 1.75.0                    |    ms | SumMillis  |
+| ------------------------------ | ----- | ---------- |
+| Rust Naive                     |  1665 | 4996109444 |
+| Rust Naive ReadLine            |  1870 | 4996109444 |
+| Rust String Iter, Custom Parse |   683 | 4996109444 |
+| Rust String, Custom Parse      |   638 | 4996109444 |
+| Rust All Bytes, Custom Parse   |   504 | 4996109444 |
+| BytesAndCustomParse            |   302 | 4996109444 |
+| Custom_MyParse                 |   196 | 4996109444 |
+| Custom_NoErrors                |   140 | 4996109444 |
+
+| .NET 8.0.1                     |    ms | SumMillis  |
+| ------------------------------ | ----- | ---------- |
+| DateTimeParse                  | 2,973 | 4996109444 |
+| DateTimeParseExact             | 3,343 | 4996109444 |
+| RustNaiveClosest               | 4,182 | 4996109444 |
+| DateTimeParseExactNotUtc       |   949 | 4996109444 |
+| DateTimeOffsetParseExact       |   725 | 4996109444 |
+| SpanOfChar                     |   412 | 4996109444 |
+| BytesAndCustomParse            |   396 | 4996109444 |
+| KnownLengthSplitAndCustomParse |   333 | 4996109444 |
+| Custom_MyParse                 |   289 | 4996109444 |
+| Custom_NoErrors                |   111 | 4996109444 |
+
+| .NET 7.0.15                    |    ms | SumMillis  |
+| ------------------------------ | ----- | ---------- |
+| DateTimeParse                  | 3,388 | 4996109444 |
+| DateTimeParseExact             | 4,767 | 4996109444 |
+| RustNaiveClosest               | 6,087 | 4996109444 |
+| DateTimeParseExactNotUtc       | 1,250 | 4996109444 |
+| DateTimeOffsetParseExact       | 1,370 | 4996109444 |
+| SpanOfChar                     |   639 | 4996109444 |
+| BytesAndCustomParse            |   451 | 4996109444 |
+| KnownLengthSplitAndCustomParse |   382 | 4996109444 |
+| Custom_MyParse                 |   420 | 4996109444 |
+| Custom_NoErrors                |   173 | 4996109444 |
+
+| .NET 6.0.26                    |    ms | SumMillis  |
+| ------------------------------ | ----- | ---------- |
+| DateTimeParse                  | 3,903 | 4996109444 |
+| DateTimeParseExact             | 5,522 | 4996109444 |
+| RustNaiveClosest               | 6,805 | 4996109444 |
+| DateTimeParseExactNotUtc       | 1,350 | 4996109444 |
+| DateTimeOffsetParseExact       | 1,360 | 4996109444 |
+| SpanOfChar                     |   895 | 4996109444 |
+| BytesAndCustomParse            |   528 | 4996109444 |
+| KnownLengthSplitAndCustomParse |   414 | 4996109444 |
+| Custom_MyParse                 |   382 | 4996109444 |
+| Custom_NoErrors                |   153 | 4996109444 |
 
 ## Issues
 
