@@ -125,7 +125,8 @@ fn main() -> ExitCode {
             let guess = args[0].to_ascii_lowercase();
             let score = args[1].parse::<u32>().unwrap();
 
-            let options = letter_options(&guess, score);
+            let frequencies = letter_frequencies(&answers);
+            let options = letter_options(&guess, score, &frequencies);
             println!("{}", options);
         }
 

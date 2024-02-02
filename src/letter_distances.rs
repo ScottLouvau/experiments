@@ -134,7 +134,21 @@ pub fn cv_to_string(cv: &[u32]) -> String {
     result
 }
 
-pub fn letter_options(guess: &str, score: u32) -> String {
+pub fn letter_frequencies(answers: &Vec<&str>) -> HashMap<(char, u8), u16>{
+    let mut frequencies = HashMap::new();
+
+    for answer in answers {
+        for (pos, letter) in answer.chars().enumerate() {
+            let entry = frequencies.entry((letter, pos as u8));
+            let count = entry.or_insert(0);
+            *count += 1;
+        }
+    }
+
+    frequencies
+}
+
+pub fn letter_options(guess: &str, score: u32, frequencies: &HashMap<(char, u8), u16>) -> String {
     let mut text = String::new();
     let mut score_digits = score_to_digits(score);
 
@@ -150,12 +164,20 @@ pub fn letter_options(guess: &str, score: u32) -> String {
 
     text += "\n";
 
-    for (letter, distance) in guess.chars().zip(score_digits.iter()) {
+    for (pos, (letter, distance)) in guess.chars().zip(score_digits.iter()).enumerate() {
+        let mut options = Vec::new();
+
         for option in 'a'..='z' {
             let distance_round = distance_between_letters_quantized(letter, option);
             if distance_round == *distance {
-                text += &format!("{option}");
+                let frequency = frequencies.get(&(option, pos as u8)).unwrap_or(&0);
+                options.push((frequency, option));
             }
+        }
+
+        options.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+        for (_frequency, option) in options {
+            text += &format!("{option}");
         }
 
         text += "\t";
@@ -235,16 +257,17 @@ mod tests {
     fn letter_and_answer_options() {
         let text = fs::read_to_string("answers.txt").unwrap();
         let answers = load_answers(&text);
+        let frequencies = letter_frequencies(&answers);
 
-        let options = letter_options("apple", 42521);
-        assert_eq!("A4\tP2\tP5\tL2\tE1\t\ngtv\tik\tgtv\tijmn\tdrswz\t", options);
+        let options = letter_options("apple", 42521, &frequencies);
+        assert_eq!("A4\tP2\tP5\tL2\tE1\t\ntgv\tik\ttgv\tnimj\trdswz\t", options);
 
         // Allow shorter values to be passed
-        let options = letter_options("a", 1);
-        assert_eq!("A1\t\nqswz\t", options);
+        let options = letter_options("a", 1, &frequencies);
+        assert_eq!("A1\t\nswqz\t", options);
 
-        let options = letter_options("aa", 12);
-        assert_eq!("A1\tA2\t\nqswz\tdex\t", options);
+        let options = letter_options("aa", 12, &frequencies);
+        assert_eq!("A1\tA2\t\nswqz\tedx\t", options);
 
         // Look for whole word matches with different thresholds
         let options = answer_options("apple", 42521, &answers, 0);
@@ -264,5 +287,17 @@ mod tests {
         assert_eq!(3, score_distance(51411, 52321));
         assert_eq!(3, score_distance(82321, 52321));
         assert_eq!(13, score_distance(0, 52321));
+    }
+
+    #[test]
+    fn letter_frequencies_test() {
+        let text = fs::read_to_string("answers.txt").unwrap();
+        let answers = load_answers(&text);
+        let frequencies = letter_frequencies(&answers);
+
+        // Verify frequency of A first, A second, S first in original Wordle answers (2,315 words)
+        assert_eq!(141, *frequencies.get(&('a', 0)).unwrap());
+        assert_eq!(304, *frequencies.get(&('a', 1)).unwrap());
+        assert_eq!(366, *frequencies.get(&('s', 0)).unwrap());
     }
 }
