@@ -1,9 +1,5 @@
 use std::{env, process::ExitCode};
-use crate::letter_distances::*;
-use crate::answers::*;
-
-mod answers;
-mod letter_distances;
+use qwertle::{answers::ANSWERS, *};
 
 const USAGE: &str = "USAGE: 
   qwertle <mode> <args>
