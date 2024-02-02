@@ -114,7 +114,7 @@ fn main() -> ExitCode {
             println!("{}", cv);
         }
 
-        "letter_options" => {
+        "lo" | "letter_options" => {
             if args.len() < 2 {
                 return print_usage("'guess' 'score' not provided.");
             }
@@ -126,7 +126,7 @@ fn main() -> ExitCode {
             println!("{}", options);
         }
 
-        "answer_options" => {
+        "ao" | "answer_options" => {
             if args.len() < 2 {
                 return print_usage("'guess' 'score' not provided.");
             }

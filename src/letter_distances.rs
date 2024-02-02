@@ -136,13 +136,18 @@ pub fn cv_to_string(cv: &[u32]) -> String {
 
 pub fn letter_options(guess: &str, score: u32) -> String {
     let mut text = String::new();
+    let mut score_digits = score_to_digits(score);
 
-    let score_digits = score_to_digits(score);
+    // If fewer than five letters were passed, score them against the last score digits
+    while guess.len() < score_digits.len() {
+        score_digits.remove(0);
+    }
 
     for (letter, distance) in guess.chars().zip(score_digits.iter()) {
         let letter = letter.to_ascii_uppercase();
         text += &format!("{letter}{distance}\t");
     }
+
     text += "\n";
 
     for (letter, distance) in guess.chars().zip(score_digits.iter()) {
@@ -234,6 +239,14 @@ mod tests {
         let options = letter_options("apple", 42521);
         assert_eq!("A4\tP2\tP5\tL2\tE1\t\ngtv\tik\tgtv\tijmn\tdrswz\t", options);
 
+        // Allow shorter values to be passed
+        let options = letter_options("a", 1);
+        assert_eq!("A1\t\nqswz\t", options);
+
+        let options = letter_options("aa", 12);
+        assert_eq!("A1\tA2\t\nqswz\tdex\t", options);
+
+        // Look for whole word matches with different thresholds
         let options = answer_options("apple", 42521, &answers, 0);
         assert_eq!(vec![(0, "vivid", 42521)], options);
 
