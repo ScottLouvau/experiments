@@ -6,3 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+[profile.release]
+strip = true
+lto = true
+opt-level = "z"
+
+# 645 KB
+# 500 KB strip = true
+# 418 KB lto = true
+# 385 KB opt-level = "z"
+
+# No Effect
+# codegen-units = 1
+# panic = "abort"

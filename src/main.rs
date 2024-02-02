@@ -1,6 +1,9 @@
-use std::{env, fs, process::ExitCode};
+use std::collections::BinaryHeap;
+use std::{env, process::ExitCode};
 use crate::letter_distances::*;
+use crate::answers::*;
 
+mod answers;
 mod letter_distances;
 
 // Goals:
@@ -31,11 +34,7 @@ fn main() -> ExitCode {
         return print_usage("No mode provided.");
     }
 
-    let text = fs::read_to_string("answers.txt").unwrap();
-    let text = text.to_ascii_lowercase();
-    let answers = load_answers(&text);
-
-    let mode = args.first().unwrap().to_ascii_lowercase();
+    let mode = args[0].to_ascii_lowercase();
     let mode = mode.as_str();
     args = &args[1..];
 
@@ -56,16 +55,24 @@ fn main() -> ExitCode {
                 return print_usage("word 'word' not provided.");
             }
 
-            let guess = args[0].to_ascii_lowercase();
+            let guess = &args[0];
             println!("Answer Distances from '{guess}':\n");
 
-            let set = distances_from_guess(&guess, &answers);
-            for (answer, distance) in set.iter() {
-                println!("{distance:05} -> {answer}");
+            let map = word_distance_map(&guess, ANSWERS);
+            let distances = map.keys().collect::<BinaryHeap<_>>();
+
+            // Iterate over map in increasing distance order
+            for distance in distances.iter() {
+                let answers = map.get(distance).unwrap();
+                for answer in answers {
+                    println!("{distance:05} -> {answer}");
+                }
             }
 
-            let distinct_distances = distinct_distances(&set);
-            println!("\n{distinct_distances} distinct distances.");
+            let cv = map_to_cv(&map);
+            let cv = cv_to_string(&cv);
+
+            println!("\n {} distinct responses.\n CV: {}", distances.len(), cv);
         }
 
         "dist" => {
@@ -73,8 +80,8 @@ fn main() -> ExitCode {
                 return print_usage("dist 'left' 'right' not provided.");
             }
 
-            let left = args[0].to_ascii_lowercase();
-            let right = args[1].to_ascii_lowercase();
+            let left = &args[0];
+            let right = &args[1];
             let distance = word_distance(&left, &right);
             println!("Distance ('{left}', '{right}') -> {distance}");
         }
@@ -82,14 +89,9 @@ fn main() -> ExitCode {
         "best" => {
             let mut best = None;
 
-            // let text = fs::read_to_string("guesses.txt").unwrap();
-            // let text = text.to_ascii_lowercase();
-            // let guesses = load_answers(&text);
-            let guesses = &answers;
-
-            for guess in guesses.iter() {
-                let set = distances_from_guess(&guess, &answers);
-                let distinct_distances = distinct_distances(&set);
+            for guess in ANSWERS.iter() {
+                let map = word_distance_map(guess, ANSWERS);
+                let distinct_distances = map.len();
 
                 if distinct_distances >= 2100 {
                     println!("{distinct_distances}: {guess}");
@@ -111,7 +113,7 @@ fn main() -> ExitCode {
             }
 
             let guess = args[0].to_ascii_lowercase();
-            let map = letter_distances::word_distance_map(&guess, &answers);
+            let map = letter_distances::word_distance_map(&guess, &ANSWERS);
             let cv = map_to_cv(&map);
             let cv = cv_to_string(&cv);
             println!("{}", cv);
@@ -125,7 +127,7 @@ fn main() -> ExitCode {
             let guess = args[0].to_ascii_lowercase();
             let score = args[1].parse::<u32>().unwrap();
 
-            let frequencies = letter_frequencies(&answers);
+            let frequencies = letter_frequencies(ANSWERS);
             let options = letter_options(&guess, score, &frequencies);
             println!("{}", options);
         }
@@ -139,7 +141,7 @@ fn main() -> ExitCode {
             let score = args[1].parse::<u32>().unwrap();
             let within: u32 = args.get(2).map(|s| s.parse().unwrap()).unwrap_or(2);
 
-            let options = answer_options(&guess, score, &answers, within);
+            let options = answer_options(&guess, score, ANSWERS, within);
             for (distance, word, score) in options {
                 println!("{distance}: {word} ({score:05})");
             }
@@ -171,32 +173,4 @@ fn distances_from_letter(letter: char) -> Vec<(char, char, u8, f64)>{
 
     set.sort_by(|a, b| a.3.partial_cmp(&b.3).unwrap());
     set
-}
-
-fn distances_from_guess<'a>(guess: &str, answers: &Vec<&'a str>) -> Vec<(&'a str, u32)> {
-    let mut set = Vec::new();
-
-    for answer in answers {
-        let distance = word_distance(guess, *answer);
-        set.push((*answer, distance));
-    }
-
-    set.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-    set
-}
-
-fn distinct_distances(set: &Vec<(&str, u32)>) -> u32 {
-    let mut last_distance = 0;
-    let mut distinct_distances = 0;
-
-    for (_, distance) in set {
-        if *distance > last_distance {
-            last_distance = *distance;
-            distinct_distances += 1;
-        } else if *distance < last_distance {
-            panic!("Distances must be sorted!");
-        }
-    }
-
-    distinct_distances
 }

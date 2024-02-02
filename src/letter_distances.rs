@@ -33,11 +33,11 @@ pub const LETTER_POSITIONS: [(u16, u16); 26] = [
 
 // Return the pixel distance between any two letters on the QWERTLE keyboard.
 pub fn distance_between_letters(mut left: char, mut right: char) -> f64 {
-    left = left.to_ascii_uppercase();
-    right = right.to_ascii_uppercase();
+    left = left.to_ascii_lowercase();
+    right = right.to_ascii_lowercase();
 
-    let (x1, y1) = LETTER_POSITIONS[(left as u8 - b'A') as usize];
-    let (x2, y2) = LETTER_POSITIONS[(right as u8 - b'A') as usize];
+    let (x1, y1) = LETTER_POSITIONS[(left as u8 - b'a') as usize];
+    let (x2, y2) = LETTER_POSITIONS[(right as u8 - b'a') as usize];
 
     let (dx, dy) = (x2 as f64 - x1 as f64, y2 as f64 - y1 as f64);
     (dx * dx + dy * dy).sqrt()
@@ -91,17 +91,6 @@ pub fn score_distance(left: u32, right: u32) -> u32 {
     distance
 }
 
-// Load an answers file into a set of strings.
-pub fn load_answers<'a>(text: &'a String) -> Vec<&'a str> {
-    let mut answers = Vec::new();
-
-    for line in text.lines() {
-        answers.push(line);
-    }
-
-    answers
-}
-
 // Given a guess and answer set, build a map of each possible score and the answers which would have that score for the guess.
 pub fn word_distance_map<'a>(guess: &str, answers: &[&'a str]) -> HashMap<u32, Vec<&'a str>> {
     let mut map: HashMap<u32, Vec<&str>> = HashMap::new();
@@ -150,7 +139,7 @@ pub fn cv_to_string(cv: &[u32]) -> String {
 }
 
 // Compute how often each letter appears in each position across all answers
-pub fn letter_frequencies(answers: &Vec<&str>) -> HashMap<(char, u8), u16>{
+pub fn letter_frequencies(answers: &[&str]) -> HashMap<(char, u8), u16>{
     let mut frequencies = HashMap::new();
 
     for answer in answers {
@@ -206,7 +195,7 @@ pub fn letter_options(guess: &str, score: u32, frequencies: &HashMap<(char, u8),
 
 // Given a guess and score, show the answers which most closely match the score,
 //  in order by how closely they match the score.
-pub fn answer_options<'a>(guess: &str, score: u32, answers: &Vec<&'a str>, within: u32) -> Vec<(u32, &'a str, u32)> {
+pub fn answer_options<'a>(guess: &str, score: u32, answers: &[&'a str], within: u32) -> Vec<(u32, &'a str, u32)> {
     let mut result = Vec::new();
 
     for answer in answers {
@@ -227,7 +216,7 @@ pub fn answer_options<'a>(guess: &str, score: u32, answers: &Vec<&'a str>, withi
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use crate::ANSWERS;
     use super::*;
 
     #[test]
@@ -259,11 +248,9 @@ mod tests {
 
     #[test]
     fn map_and_cv() {
-        let text = fs::read_to_string("answers.txt").unwrap();
-        let answers = load_answers(&text);
-        assert_eq!(2315, answers.len());
+        assert_eq!(2315, ANSWERS.len());
 
-        let map = word_distance_map("apple", &answers);
+        let map = word_distance_map("apple", ANSWERS);
         assert_eq!(2315, map.iter().map(|(_, v)| v.len()).sum::<usize>());
 
         let cv = map_to_cv(&map);
@@ -275,9 +262,7 @@ mod tests {
 
     #[test]
     fn letter_and_answer_options() {
-        let text = fs::read_to_string("answers.txt").unwrap();
-        let answers = load_answers(&text);
-        let frequencies = letter_frequencies(&answers);
+        let frequencies = letter_frequencies(ANSWERS);
 
         let options = letter_options("apple", 42521, &frequencies);
         assert_eq!("A4\tP2\tP5\tL2\tE1\t\ntgv\tik\ttgv\tnimj\trdswz\t", options);
@@ -290,10 +275,10 @@ mod tests {
         assert_eq!("A1\tA2\t\nswqz\tedx\t", options);
 
         // Look for whole word matches with different thresholds
-        let options = answer_options("apple", 42521, &answers, 0);
+        let options = answer_options("apple", 42521, ANSWERS, 0);
         assert_eq!(vec![(0, "vivid", 42521)], options);
 
-        let options = answer_options("apple", 42521, &answers, 1);
+        let options = answer_options("apple", 42521, ANSWERS, 1);
         assert_eq!(vec![(0, "vivid", 42521), (1, "rigid", 32521), (1, "vigor", 42511)], options);
     }
 
@@ -311,9 +296,7 @@ mod tests {
 
     #[test]
     fn letter_frequencies_test() {
-        let text = fs::read_to_string("answers.txt").unwrap();
-        let answers = load_answers(&text);
-        let frequencies = letter_frequencies(&answers);
+        let frequencies = letter_frequencies(ANSWERS);
 
         // Verify frequency of A first, A second, S first in original Wordle answers (2,315 words)
         assert_eq!(141, *frequencies.get(&('a', 0)).unwrap());
