@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-
+// Array of the keyboard key coordinates of the top left corner of each letter.
+// Used to compute the pixel distance between any two letters.
 pub const LETTER_POSITIONS: [(u16, u16); 26] = [
     (31, 72),
     (283, 136),
@@ -30,6 +31,7 @@ pub const LETTER_POSITIONS: [(u16, u16); 26] = [
     (81, 36)
 ];
 
+// Return the pixel distance between any two letters on the QWERTLE keyboard.
 pub fn distance_between_letters(mut left: char, mut right: char) -> f64 {
     left = left.to_ascii_uppercase();
     right = right.to_ascii_uppercase();
@@ -41,11 +43,15 @@ pub fn distance_between_letters(mut left: char, mut right: char) -> f64 {
     (dx * dx + dy * dy).sqrt()
 }
 
+// Return the quantized distance between any two letters on the QWERTLE keyboard.
+//  Each unit is 50 pixels, which is the distance away of one letter directly left or right.
 pub fn distance_between_letters_quantized(left: char, right: char) -> u8 {
     let dist = distance_between_letters(left, right);
     (dist / 50.0).round() as u8
 }
 
+// Compute the distance between each letter of two words.
+// Each distance is one digit in the returned number, with the last letter in the lowest (ones) digit.
 pub fn word_distance(left: &str, right: &str) -> u32 {
     let mut distance = 0u32;
 
@@ -57,6 +63,7 @@ pub fn word_distance(left: &str, right: &str) -> u32 {
     distance
 }
 
+// Given a word_distance score, separate and return the distance digit per letter.
 pub fn score_to_digits(score: u32) -> Vec<u8> {
     let mut digits = Vec::new();
     let mut left = score;
@@ -70,6 +77,8 @@ pub fn score_to_digits(score: u32) -> Vec<u8> {
     digits
 }
 
+// Compute the distance between two scores.
+// This is the sum of the absolute difference between each digit.
 pub fn score_distance(left: u32, right: u32) -> u32 {
     let left_digits = score_to_digits(left);
     let right_digits = score_to_digits(right);
@@ -82,6 +91,7 @@ pub fn score_distance(left: u32, right: u32) -> u32 {
     distance
 }
 
+// Load an answers file into a set of strings.
 pub fn load_answers<'a>(text: &'a String) -> Vec<&'a str> {
     let mut answers = Vec::new();
 
@@ -92,6 +102,7 @@ pub fn load_answers<'a>(text: &'a String) -> Vec<&'a str> {
     answers
 }
 
+// Given a guess and answer set, build a map of each possible score and the answers which would have that score for the guess.
 pub fn word_distance_map<'a>(guess: &str, answers: &[&'a str]) -> HashMap<u32, Vec<&'a str>> {
     let mut map: HashMap<u32, Vec<&str>> = HashMap::new();
 
@@ -104,6 +115,9 @@ pub fn word_distance_map<'a>(guess: &str, answers: &[&'a str]) -> HashMap<u32, V
     map
 }
 
+// Given an answer map, compute the cluster vector of the map.
+// Entry C[i] in the vector is how many distinct groups of i+1 answers there are with the same score.
+// Cluster Vectors can be used to see how well a guess splits apart answers and the worst-case group sizes left.
 pub fn map_to_cv(map: &HashMap<u32, Vec<&str>>) -> Vec<u32> {
     let mut cv = Vec::new();
 
@@ -119,6 +133,7 @@ pub fn map_to_cv(map: &HashMap<u32, Vec<&str>>) -> Vec<u32> {
     cv
 }
 
+// Write a Cluster Vector as an array in string form. (ex: [1920, 164, 20, 6])
 pub fn cv_to_string(cv: &[u32]) -> String {
     let mut result = String::new();
     result += "[";
@@ -134,6 +149,7 @@ pub fn cv_to_string(cv: &[u32]) -> String {
     result
 }
 
+// Compute how often each letter appears in each position across all answers
 pub fn letter_frequencies(answers: &Vec<&str>) -> HashMap<(char, u8), u16>{
     let mut frequencies = HashMap::new();
 
@@ -148,6 +164,8 @@ pub fn letter_frequencies(answers: &Vec<&str>) -> HashMap<(char, u8), u16>{
     frequencies
 }
 
+// Given a guess and score (the distance colors), show the likely letters for each position.
+// Sort the letters so that the ones which appear most often in each position are listed first.
 pub fn letter_options(guess: &str, score: u32, frequencies: &HashMap<(char, u8), u16>) -> String {
     let mut text = String::new();
     let mut score_digits = score_to_digits(score);
@@ -186,6 +204,8 @@ pub fn letter_options(guess: &str, score: u32, frequencies: &HashMap<(char, u8),
     text
 }
 
+// Given a guess and score, show the answers which most closely match the score,
+//  in order by how closely they match the score.
 pub fn answer_options<'a>(guess: &str, score: u32, answers: &Vec<&'a str>, within: u32) -> Vec<(u32, &'a str, u32)> {
     let mut result = Vec::new();
 
