@@ -52,9 +52,9 @@ Answer Distances from 'papal':
 03167 -> prone
 03185 -> proof
 03212 -> prism
-03217 -> prize
 03226 -> pried
 03227 -> pride
+03227 -> prize
 03231 -> prick
 03237 -> price
 03244 -> privy
@@ -103,7 +103,7 @@ Answer Distances from 'papal':
 07737 -> piece
 07744 -> piety
 07777 -> pixie
-07818 -> pizza
+07828 -> pizza
 07961 -> piano
 07967 -> pique
 08094 -> poppy
@@ -133,7 +133,7 @@ Answer Distances from 'papal':
 08826 -> poser
 08826 -> power
 08875 -> posit
-08918 -> plaza
+08928 -> plaza
 08937 -> place
 08947 -> plate
 08961 -> plank
@@ -161,10 +161,10 @@ Answer Distances from 'papal':
 10722 -> laden
 10787 -> ladle
 10811 -> lasso
-11167 -> ozone
 11264 -> owing
 11426 -> owner
 12026 -> leper
+12167 -> ozone
 12227 -> oxide
 12366 -> lemur
 12382 -> lemon
@@ -326,8 +326,8 @@ Answer Distances from 'papal':
 28475 -> ionic
 28988 -> koala
 30087 -> maple
-30217 -> maize
 30226 -> maker
+30227 -> maize
 30347 -> mauve
 30351 -> mambo
 30365 -> jaunt
@@ -358,8 +358,8 @@ Answer Distances from 'papal':
 30702 -> madam
 30772 -> maxim
 30784 -> madly
-30814 -> jazzy
 30817 -> masse
+30824 -> jazzy
 30882 -> mason
 31264 -> using
 31300 -> usual
@@ -689,10 +689,10 @@ Answer Distances from 'papal':
 47882 -> bison
 48105 -> bloat
 48112 -> blown
-48114 -> boozy
 48115 -> boost
-48117 -> booze
 48117 -> noose
+48124 -> boozy
+48127 -> booze
 48131 -> block
 48143 -> booth
 48144 -> booty
@@ -761,8 +761,8 @@ Answer Distances from 'papal':
 48882 -> bosom
 48915 -> blast
 48915 -> boast
-48917 -> blaze
 48927 -> blade
+48927 -> blaze
 48931 -> black
 48936 -> board
 48936 -> hoard
@@ -785,10 +785,10 @@ Answer Distances from 'papal':
 50226 -> taker
 50265 -> taint
 50284 -> gaily
-50317 -> gauze
 50324 -> gaudy
 50326 -> gamer
 50326 -> tamer
+50327 -> gauze
 50347 -> gauge
 50365 -> gamut
 50365 -> gaunt
@@ -907,8 +907,8 @@ Answer Distances from 'papal':
 53911 -> grasp
 53913 -> trash
 53917 -> grass
-53917 -> graze
 53927 -> grade
+53927 -> graze
 53927 -> trade
 53931 -> track
 53935 -> graft
@@ -1073,8 +1073,8 @@ Answer Distances from 'papal':
 58826 -> tower
 58915 -> toast
 58917 -> glass
-58917 -> glaze
 58927 -> glade
+58927 -> glaze
 58937 -> glare
 58966 -> gland
 60026 -> caper
@@ -1207,7 +1207,7 @@ Answer Distances from 'papal':
 63115 -> frost
 63116 -> crowd
 63117 -> cross
-63117 -> froze
+63127 -> froze
 63131 -> crock
 63131 -> frock
 63143 -> froth
@@ -1253,9 +1253,9 @@ Answer Distances from 'papal':
 63797 -> crepe
 63910 -> crawl
 63913 -> crash
-63914 -> crazy
 63917 -> crass
-63917 -> craze
+63924 -> crazy
+63927 -> craze
 63931 -> crack
 63935 -> craft
 63947 -> crate
@@ -1339,7 +1339,7 @@ Answer Distances from 'papal':
 66726 -> ruder
 66747 -> fudge
 66814 -> fussy
-66814 -> fuzzy
+66824 -> fuzzy
 66844 -> rusty
 67022 -> ripen
 67026 -> riper
@@ -1378,8 +1378,8 @@ Answer Distances from 'papal':
 67747 -> ridge
 67766 -> fiend
 67786 -> field
-67814 -> fizzy
 67822 -> risen
+67824 -> fizzy
 67826 -> riser
 67854 -> fishy
 67874 -> risky
@@ -1668,7 +1668,7 @@ Answer Distances from 'papal':
 77627 -> emcee
 77644 -> dirty
 77647 -> dirge
-77814 -> dizzy
+77824 -> dizzy
 77831 -> disco
 77934 -> diary
 77970 -> email
@@ -1764,7 +1764,7 @@ Answer Distances from 'papal':
 82078 -> sepia
 82113 -> welsh
 82133 -> welch
-82217 -> seize
+82227 -> seize
 82236 -> weird
 82243 -> weigh
 82322 -> semen
@@ -2049,8 +2049,8 @@ Answer Distances from 'papal':
 87980 -> small
 88106 -> solar
 88113 -> slosh
-88114 -> woozy
 88124 -> woody
+88124 -> woozy
 88126 -> wooer
 88143 -> sloth
 88143 -> sooth
@@ -2154,7 +2154,6 @@ Answer Distances from 'papal':
 91177 -> awoke
 91227 -> aside
 91228 -> askew
-91337 -> azure
 91422 -> ashen
 91660 -> awful
 91685 -> ascot
@@ -2172,6 +2171,7 @@ Answer Distances from 'papal':
 92200 -> axial
 92282 -> axiom
 92282 -> axion
+92337 -> azure
 92372 -> admin
 92375 -> admit
 92385 -> adult
@@ -2283,7 +2283,7 @@ Answer Distances from 'papal':
 97766 -> amend
 97887 -> aisle
 97917 -> amass
-97917 -> amaze
+97927 -> amaze
 98058 -> alpha
 98104 -> allay
 98124 -> alley
@@ -2316,5 +2316,14 @@ Answer Distances from 'papal':
 99682 -> apron
 99935 -> apart
 
- 2116 distinct responses.
- CV: [1937, 161, 16, 2]
+ 2118 distinct responses.
+ CV: [1942, 157, 17, 2]
+
+| 0     | 1     | 2     | 3     | 4     | 5     | 6     | 7     | 8     | 9     |
+|-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|
+| p (0) | lo    | ik    | muj   | bhny  | tgv   | cfr   | dex   | swz   | aq    |
+| a (1) | wsq   | edxz  | rcf   | tvg   | hyb   | unj   | imk   | ol    | p     |
+| p (2) | ol    | ik    | umj   | nbyh  | tgv   | rcf   | edx   | swz   | aq    |
+| a (3) | swq   | edzx  | crf   | tgv   | hby   | nuj   | imk   | lo    | p     |
+| l (4) | kop   | nmij  | hbu   | ygv   | tcf   | rdx   | esz   | aw    | q     |
+

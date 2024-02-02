@@ -1,4 +1,3 @@
-use std::collections::BinaryHeap;
 use std::{env, process::ExitCode};
 use crate::letter_distances::*;
 use crate::answers::*;
@@ -6,25 +5,14 @@ use crate::answers::*;
 mod answers;
 mod letter_distances;
 
-// Goals:
-//  - Compute letter distances accurately.
-//  - Show letter options for guess and distances (qwertle options apple 46294)
-//  - Compute distances between guess and all answer options
-//  - Show answer buckets for a given guess.
-//  - ? Draw keyboard with possible letters colored?
-
 const USAGE: &str = "USAGE: 
   qwertle <mode> <args>
 
 MODES:
-  letter <letter>                   Show distance of each letter from <letter>
-  word <guess>                      Show answer distances from guess
-  dist <left> <right>               Show distance between two words
   best                              Find guess with the most distinct responses
-  cv <guess>                        Show cluster vector of guess
-  letter_options <guess> <score>    Show letter possibles for score
-  answer_options <guess> <score>    Show possible answers for score";
-
+  word <guess>                      For a guess, response for each answer, cluster vector, and letter guess table.
+  letter_options <guess> <score>    (lo) For a guess and score, show the possible letters at each position.
+  answer_options <guess> <score>    (ao) For a guess and score, show possible answers closest to the score.";
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();
@@ -39,53 +27,6 @@ fn main() -> ExitCode {
     args = &args[1..];
 
     match mode {
-        "letter" => {
-            if args.len() == 0 {
-                return print_usage("letter 'letter' not provided.");
-            }
-
-            let from: char = args[0].chars().next().unwrap();
-            for (_, to, distance_round, distance_exact) in distances_from_letter(from) {
-                println!("{from}{to} -> {distance_round} ({distance_exact:.0})");
-            }
-        }
-
-        "word" => {
-            if args.len() == 0 {
-                return print_usage("word 'word' not provided.");
-            }
-
-            let guess = &args[0];
-            println!("Answer Distances from '{guess}':\n");
-
-            let map = word_distance_map(&guess, ANSWERS);
-            let distances = map.keys().collect::<BinaryHeap<_>>();
-
-            // Iterate over map in increasing distance order
-            for distance in distances.iter() {
-                let answers = map.get(distance).unwrap();
-                for answer in answers {
-                    println!("{distance:05} -> {answer}");
-                }
-            }
-
-            let cv = map_to_cv(&map);
-            let cv = cv_to_string(&cv);
-
-            println!("\n {} distinct responses.\n CV: {}", distances.len(), cv);
-        }
-
-        "dist" => {
-            if args.len() != 2 {
-                return print_usage("dist 'left' 'right' not provided.");
-            }
-
-            let left = &args[0];
-            let right = &args[1];
-            let distance = word_distance(&left, &right);
-            println!("Distance ('{left}', '{right}') -> {distance}");
-        }
-
         "best" => {
             let mut best = None;
 
@@ -107,16 +48,32 @@ fn main() -> ExitCode {
             }
         }
 
-        "cv" => {
-            if args.len() == 0 {
-                return print_usage("cv 'word' not provided.");
+        "word" => {
+            if args.len() < 1 {
+                return print_usage("word 'word' not provided.");
             }
 
-            let guess = args[0].to_ascii_lowercase();
-            let map = letter_distances::word_distance_map(&guess, &ANSWERS);
+            let guess = &args[0];
+            println!("Answer Distances from '{guess}':\n");
+
+            let map = word_distance_map(&guess, ANSWERS);
+            let mut distances = map.keys().collect::<Vec<_>>();
+            distances.sort();
+
+            // Iterate over map in increasing distance order
+            for distance in distances.iter() {
+                let answers = map.get(distance).unwrap();
+                for answer in answers {
+                    println!("{distance:05} -> {answer}");
+                }
+            }
+
             let cv = map_to_cv(&map);
             let cv = cv_to_string(&cv);
-            println!("{}", cv);
+            println!("\n {} distinct responses.\n CV: {}", distances.len(), cv);
+
+            let table = letter_table(&guess, &ANSWERS);
+            println!("\n{}", table);
         }
 
         "lo" | "letter_options" => {
@@ -159,18 +116,4 @@ fn print_usage(error: &str) -> ExitCode {
     println!("ERROR:\n  {}", error);
     println!("\n{}", USAGE);
     ExitCode::FAILURE
-}
-
-fn distances_from_letter(letter: char) -> Vec<(char, char, u8, f64)>{
-    let mut set = Vec::new();
-
-    for right in 0u8..26 {
-        let right = (right + b'A') as char;
-        let distance_round = letter_distances::distance_between_letters_quantized(letter, right);
-        let distance_exact = letter_distances::distance_between_letters(letter, right);
-        set.push((letter, right, distance_round, distance_exact));
-    }
-
-    set.sort_by(|a, b| a.3.partial_cmp(&b.3).unwrap());
-    set
 }

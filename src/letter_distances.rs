@@ -28,7 +28,7 @@ pub const LETTER_POSITIONS: [(u16, u16); 26] = [
     (58, 8),
     (132, 136),
     (258, 8),
-    (81, 36)
+    (81, 136)
 ];
 
 // Return the pixel distance between any two letters on the QWERTLE keyboard.
@@ -171,18 +171,9 @@ pub fn letter_options(guess: &str, score: u32, frequencies: &HashMap<(char, u8),
 
     text += "\n";
 
+    // Show letters that are at the expected distance from each guess letter, with the most likely letters first
     for (pos, (letter, distance)) in guess.chars().zip(score_digits.iter()).enumerate() {
-        let mut options = Vec::new();
-
-        for option in 'a'..='z' {
-            let distance_round = distance_between_letters_quantized(letter, option);
-            if distance_round == *distance {
-                let frequency = frequencies.get(&(option, pos as u8)).unwrap_or(&0);
-                options.push((frequency, option));
-            }
-        }
-
-        options.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+        let options = letters_at_distance(letter, pos as u8, *distance, &frequencies);
         for (_frequency, option) in options {
             text += &format!("{option}");
         }
@@ -191,6 +182,55 @@ pub fn letter_options(guess: &str, score: u32, frequencies: &HashMap<(char, u8),
     }
 
     text
+}
+
+pub fn letter_table(guess: &str, answers: &[&str]) -> String {
+    let mut text = String::new();
+    let frequencies = letter_frequencies(answers);
+
+    text += "| 0     | 1     | 2     | 3     | 4     | 5     | 6     | 7     | 8     | 9     |\n";
+    text += "|-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|\n";
+
+    for (pos, letter) in guess.chars().enumerate() {
+        text += &format!("| {letter} ({pos}) |");
+
+        for distance in 1u8..=9 {
+            text += " ";
+
+            let options = letters_at_distance(letter, pos as u8, distance, &frequencies);
+            for (_, other) in options.iter() {
+                text += &format!("{other}");
+            }
+
+            for _ in (options.len())..=5 {
+                text += " ";
+            }
+
+            text += "|";
+        }
+
+        text += "\n";
+    }
+
+    text
+
+}
+
+// Find all letters at a given distance from a specific guess letter,
+//  and return in order of how commonly they occur at the specific word position.
+fn letters_at_distance(from_letter: char, at_position: u8, at_distance: u8, frequencies: &HashMap<(char, u8), u16>) -> Vec<(u16, char)> {
+    let mut options = Vec::new();
+
+    for option in 'a'..='z' {
+        let distance_round = distance_between_letters_quantized(from_letter, option);
+        if distance_round == at_distance {
+            let frequency = frequencies.get(&(option, at_position)).unwrap_or(&0);
+            options.push((*frequency, option));
+        }
+    }
+
+    options.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+    options
 }
 
 // Given a guess and score, show the answers which most closely match the score,
@@ -225,12 +265,25 @@ mod tests {
             assert_eq!(0, distance_between_letters_quantized(l, l));
         }
 
+        for l in 'a'..='z' {
+            for r in 'a'..='z' {
+                let left = distance_between_letters(l, r).round();
+                let right = distance_between_letters(r, l).round();
+                assert_eq!(left, right);
+            }
+        }
+
         assert_eq!(1, distance_between_letters_quantized('O', 'p'));
         assert_eq!(1, distance_between_letters_quantized('l', 'p'));
         assert_eq!(2, distance_between_letters_quantized('K', 'P'));
         assert_eq!(3, distance_between_letters_quantized('m', 'P'));
 
         assert_eq!(4, distance_between_letters_quantized('g', 'a'));
+        assert_eq!(3, distance_between_letters_quantized('e', 'z'));
+
+        assert_eq!(382.0, distance_between_letters('p', 's').round());
+        assert_eq!(398.0, distance_between_letters('p', 'z').round());
+        assert_eq!(450.0, distance_between_letters('p', 'q').round());
     }
 
     #[test]
@@ -254,10 +307,10 @@ mod tests {
         assert_eq!(2315, map.iter().map(|(_, v)| v.len()).sum::<usize>());
 
         let cv = map_to_cv(&map);
-        assert_eq!(vec![1914, 162, 23, 2], cv);
+        assert_eq!(vec![1912, 163, 23, 2], cv);
 
         let cv = cv_to_string(&cv);
-        assert_eq!("[1914, 162, 23, 2]", cv);
+        assert_eq!("[1912, 163, 23, 2]", cv);
     }
 
     #[test]
@@ -265,14 +318,14 @@ mod tests {
         let frequencies = letter_frequencies(ANSWERS);
 
         let options = letter_options("apple", 42521, &frequencies);
-        assert_eq!("A4\tP2\tP5\tL2\tE1\t\ntgv\tik\ttgv\tnimj\trdswz\t", options);
+        assert_eq!("A4\tP2\tP5\tL2\tE1\t\ntgv\tik\ttgv\tnimj\trdsw\t", options);
 
         // Allow shorter values to be passed
         let options = letter_options("a", 1, &frequencies);
-        assert_eq!("A1\t\nswqz\t", options);
+        assert_eq!("A1\t\nswq\t", options);
 
         let options = letter_options("aa", 12, &frequencies);
-        assert_eq!("A1\tA2\t\nswqz\tedx\t", options);
+        assert_eq!("A1\tA2\t\nswq\tedxz\t", options);
 
         // Look for whole word matches with different thresholds
         let options = answer_options("apple", 42521, ANSWERS, 0);
@@ -302,5 +355,32 @@ mod tests {
         assert_eq!(141, *frequencies.get(&('a', 0)).unwrap());
         assert_eq!(304, *frequencies.get(&('a', 1)).unwrap());
         assert_eq!(366, *frequencies.get(&('s', 0)).unwrap());
+    }
+
+    #[test]
+    fn letters_at_distance_tests() {
+        let frequencies = letter_frequencies(ANSWERS);
+
+        let neighbors = letters_at_distance('a', 0, 1, &frequencies);
+        let letters = neighbors.iter().map(|(_, l)| l).collect::<String>();
+        assert_eq!("swq", letters);
+
+        let neighbors = letters_at_distance('e', 4, 2, &frequencies);
+        let letters = neighbors.iter().map(|(_, l)| l).collect::<String>();
+        assert_eq!("tafq", letters);
+    }
+
+    #[test]
+    fn letter_table_test() {
+        let table = letter_table("apple", ANSWERS);
+        let expected = "| 0     | 1     | 2     | 3     | 4     | 5     | 6     | 7     | 8     | 9     |
+|-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|
+| a (0) | swq   | dezx  | cfr   | tgv   | bhy   | nuj   | mik   | lo    | p     |
+| p (1) | ol    | ik    | umj   | hnyb  | tvg   | rcf   | edx   | wsz   | aq    |
+| p (2) | ol    | ik    | umj   | nbyh  | tgv   | rcf   | edx   | swz   | aq    |
+| l (3) | okp   | nimj  | uhb   | gvy   | ctf   | rdx   | esz   | aw    | q     |
+| e (4) | rdsw  | tafq  | ygcxz | hbuv  | nij   | kom   | lp    |       |       |
+";
+        assert_eq!(expected, table);
     }
 }
