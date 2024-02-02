@@ -61,13 +61,25 @@ pub fn score_to_digits(score: u32) -> Vec<u8> {
     let mut digits = Vec::new();
     let mut left = score;
 
-    while left > 0 {
+    for _ in 0..5 {
         digits.push((left % 10) as u8);
         left /= 10;
     }
 
     digits.reverse();
     digits
+}
+
+pub fn score_distance(left: u32, right: u32) -> u32 {
+    let left_digits = score_to_digits(left);
+    let right_digits = score_to_digits(right);
+
+    let mut distance = 0u32;
+    for (l, r) in left_digits.iter().zip(right_digits.iter()) {
+        distance += ((*l as i32) - (*r as i32)).abs() as u32;
+    }
+
+    distance
 }
 
 pub fn load_answers<'a>(text: &'a String) -> Vec<&'a str> {
@@ -147,14 +159,20 @@ pub fn letter_options(guess: &str, score: u32) -> String {
     text
 }
 
-pub fn answer_options<'a>(guess: &str, score: u32, answers: &Vec<&'a str>) -> Vec<&'a str> {
+pub fn answer_options<'a>(guess: &str, score: u32, answers: &Vec<&'a str>, within: u32) -> Vec<(u32, &'a str, u32)> {
     let mut result = Vec::new();
 
     for answer in answers {
-        let distance = word_distance(guess, *answer);
-        if distance == score {
-            result.push(*answer);
+        let answer_score = word_distance(guess, *answer);
+        let distance = score_distance(score, answer_score);
+
+        if distance <= within {
+            result.push((distance, *answer, answer_score));
         }
+    }
+
+    if within > 0 {
+        result.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
     }
 
     result
@@ -187,8 +205,8 @@ mod tests {
 
     #[test]
     fn score_to_digits_test() {
-        assert_eq!(vec![1, 2, 3], score_to_digits(123));
-        assert_eq!(vec![1, 0, 0, 0], score_to_digits(1000));
+        assert_eq!(vec![0, 0, 1, 2, 3], score_to_digits(123));
+        assert_eq!(vec![0, 1, 0, 0, 0], score_to_digits(1000));
         assert_eq!(vec![3, 5, 4, 6, 9], score_to_digits(35469));
     }
 
@@ -216,7 +234,22 @@ mod tests {
         let options = letter_options("apple", 42521);
         assert_eq!("A4\tP2\tP5\tL2\tE1\t\ngtv\tik\tgtv\tijmn\tdrswz\t", options);
 
-        let options = answer_options("apple", 42521, &answers);
-        assert_eq!("vivid", options.join("\n"));
+        let options = answer_options("apple", 42521, &answers, 0);
+        assert_eq!(vec![(0, "vivid", 42521)], options);
+
+        let options = answer_options("apple", 42521, &answers, 1);
+        assert_eq!(vec![(0, "vivid", 42521), (1, "rigid", 32521), (1, "vigor", 42511)], options);
+    }
+
+    #[test]
+    fn score_dist() {
+        assert_eq!(0, score_distance(52321, 52321));
+
+        assert_eq!(1, score_distance(51321, 52321));
+        assert_eq!(1, score_distance(53321, 52321));
+
+        assert_eq!(3, score_distance(51411, 52321));
+        assert_eq!(3, score_distance(82321, 52321));
+        assert_eq!(13, score_distance(0, 52321));
     }
 }

@@ -133,10 +133,11 @@ fn main() -> ExitCode {
 
             let guess = args[0].to_ascii_lowercase();
             let score = args[1].parse::<u32>().unwrap();
+            let within: u32 = args.get(2).map(|s| s.parse().unwrap()).unwrap_or(0);
 
-            let options = answer_options(&guess, score, &answers);
-            for option in options {
-                println!("{}", option);
+            let options = answer_options(&guess, score, &answers, within);
+            for (distance, word, score) in options {
+                println!("{distance}: {word} ({score:05})");
             }
         }
 
