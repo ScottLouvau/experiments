@@ -15,7 +15,9 @@ const USAGE: &str = "Usage: qwertle <mode> <args>
   word <guess>: Show answer distances from guess
   best: Find guess with the most distinct responses
   cv <guess>: Show cluster vector of guess
-  options <guess> <score>: Show letter possibles for score";
+  letter_options <guess> <score>: Show letter possibles for score
+  answer_options <guess> <score>: Show possible answers for score";
+
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();
@@ -43,7 +45,7 @@ fn main() -> ExitCode {
             for (_, to, distance_round, distance_exact) in distances_from_letter(from) {
                 println!("{from}{to} -> {distance_round} ({distance_exact:.0})");
             }
-        },
+        }
 
         "word" => {
             if args.len() == 0 {
@@ -60,7 +62,7 @@ fn main() -> ExitCode {
 
             let distinct_distances = distinct_distances(&set);
             println!("\n{distinct_distances} distinct distances.");
-        },
+        }
 
         "best" => {
             let mut best = None;
@@ -86,7 +88,7 @@ fn main() -> ExitCode {
             if let Some((guess, distinct_distances)) = best {
                 println!("Best: {guess} ({distinct_distances} distinct distances).");
             }
-        },
+        }
 
         "cv" => {
             if args.len() == 0 {
@@ -98,27 +100,31 @@ fn main() -> ExitCode {
             let cv = map_to_cv(&map);
             let cv = cv_to_string(&cv);
             println!("{}", cv);
-        },
+        }
 
-        "options" => {
+        "letter_options" => {
             if args.len() < 2 {
-                return print_usage("'score' not provided.");
+                return print_usage("'guess' 'score' not provided.");
             }
-            
+
             let guess = args[0].to_ascii_lowercase();
             let score = args[1].parse::<u32>().unwrap();
-            let score_digits = score_to_digits(score);
 
-            for (letter, distance) in guess.chars().zip(score_digits.iter()) {
+            let options = letter_options(&guess, score);
+            println!("{}", options);
+        }
 
-                for option in 'a'..='z' {
-                    let distance_round = letter_distances::distance_between_letters_quantized(letter, option);
-                    if distance_round == *distance {
-                        print!("{option}");
-                    }
-                }
+        "answer_options" => {
+            if args.len() < 2 {
+                return print_usage("'guess' 'score' not provided.");
+            }
 
-                print!("\t");
+            let guess = args[0].to_ascii_lowercase();
+            let score = args[1].parse::<u32>().unwrap();
+
+            let options = answer_options(&guess, score, &answers);
+            for option in options {
+                println!("{}", option);
             }
         }
 

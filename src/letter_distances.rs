@@ -122,6 +122,44 @@ pub fn cv_to_string(cv: &[u32]) -> String {
     result
 }
 
+pub fn letter_options(guess: &str, score: u32) -> String {
+    let mut text = String::new();
+
+    let score_digits = score_to_digits(score);
+
+    for (letter, distance) in guess.chars().zip(score_digits.iter()) {
+        let letter = letter.to_ascii_uppercase();
+        text += &format!("{letter}{distance}\t");
+    }
+    text += "\n";
+
+    for (letter, distance) in guess.chars().zip(score_digits.iter()) {
+        for option in 'a'..='z' {
+            let distance_round = distance_between_letters_quantized(letter, option);
+            if distance_round == *distance {
+                text += &format!("{option}");
+            }
+        }
+
+        text += "\t";
+    }
+
+    text
+}
+
+pub fn answer_options<'a>(guess: &str, score: u32, answers: &Vec<&'a str>) -> Vec<&'a str> {
+    let mut result = Vec::new();
+
+    for answer in answers {
+        let distance = word_distance(guess, *answer);
+        if distance == score {
+            result.push(*answer);
+        }
+    }
+
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -168,5 +206,17 @@ mod tests {
 
         let cv = cv_to_string(&cv);
         assert_eq!("[1914, 162, 23, 2]", cv);
+    }
+
+    #[test]
+    fn letter_and_answer_options() {
+        let text = fs::read_to_string("answers.txt").unwrap();
+        let answers = load_answers(&text);
+
+        let options = letter_options("apple", 42521);
+        assert_eq!("A4\tP2\tP5\tL2\tE1\t\ngtv\tik\tgtv\tijmn\tdrswz\t", options);
+
+        let options = answer_options("apple", 42521, &answers);
+        assert_eq!("vivid", options.join("\n"));
     }
 }
