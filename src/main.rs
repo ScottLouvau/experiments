@@ -10,14 +10,17 @@ mod letter_distances;
 //  - Show answer buckets for a given guess.
 //  - ? Draw keyboard with possible letters colored?
 
-const USAGE: &str = "Usage: qwertle <mode> <args>
-  letter <letter>: Show distance of each letter from <letter>
-  word <guess>: Show answer distances from guess
-  dist <left> <right>: Show distance between two words
-  best: Find guess with the most distinct responses
-  cv <guess>: Show cluster vector of guess
-  letter_options <guess> <score>: Show letter possibles for score
-  answer_options <guess> <score>: Show possible answers for score";
+const USAGE: &str = "USAGE: 
+  qwertle <mode> <args>
+
+MODES:
+  letter <letter>                   Show distance of each letter from <letter>
+  word <guess>                      Show answer distances from guess
+  dist <left> <right>               Show distance between two words
+  best                              Find guess with the most distinct responses
+  cv <guess>                        Show cluster vector of guess
+  letter_options <guess> <score>    Show letter possibles for score
+  answer_options <guess> <score>    Show possible answers for score";
 
 
 fn main() -> ExitCode {
@@ -39,7 +42,7 @@ fn main() -> ExitCode {
     match mode {
         "letter" => {
             if args.len() == 0 {
-                return print_usage("'letter' not provided.");
+                return print_usage("letter 'letter' not provided.");
             }
 
             let from: char = args[0].chars().next().unwrap();
@@ -50,7 +53,7 @@ fn main() -> ExitCode {
 
         "word" => {
             if args.len() == 0 {
-                return print_usage("'word' not provided.");
+                return print_usage("word 'word' not provided.");
             }
 
             let guess = args[0].to_ascii_lowercase();
@@ -67,7 +70,7 @@ fn main() -> ExitCode {
 
         "dist" => {
             if args.len() != 2 {
-                return print_usage("'left' 'right' not provided.");
+                return print_usage("dist 'left' 'right' not provided.");
             }
 
             let left = args[0].to_ascii_lowercase();
@@ -104,7 +107,7 @@ fn main() -> ExitCode {
 
         "cv" => {
             if args.len() == 0 {
-                return print_usage("'word' not provided.");
+                return print_usage("cv 'word' not provided.");
             }
 
             let guess = args[0].to_ascii_lowercase();
@@ -116,7 +119,7 @@ fn main() -> ExitCode {
 
         "lo" | "letter_options" => {
             if args.len() < 2 {
-                return print_usage("'guess' 'score' not provided.");
+                return print_usage("letter_options 'guess' 'score' not provided.");
             }
 
             let guess = args[0].to_ascii_lowercase();
@@ -128,12 +131,12 @@ fn main() -> ExitCode {
 
         "ao" | "answer_options" => {
             if args.len() < 2 {
-                return print_usage("'guess' 'score' not provided.");
+                return print_usage("answer_options 'guess' 'score' not provided.");
             }
 
             let guess = args[0].to_ascii_lowercase();
             let score = args[1].parse::<u32>().unwrap();
-            let within: u32 = args.get(2).map(|s| s.parse().unwrap()).unwrap_or(0);
+            let within: u32 = args.get(2).map(|s| s.parse().unwrap()).unwrap_or(2);
 
             let options = answer_options(&guess, score, &answers, within);
             for (distance, word, score) in options {
@@ -150,8 +153,8 @@ fn main() -> ExitCode {
 }
 
 fn print_usage(error: &str) -> ExitCode {
-    println!("Error: {}", error);
-    println!("{}", USAGE);
+    println!("ERROR:\n  {}", error);
+    println!("\n{}", USAGE);
     ExitCode::FAILURE
 }
 
