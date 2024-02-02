@@ -13,6 +13,7 @@ mod letter_distances;
 const USAGE: &str = "Usage: qwertle <mode> <args>
   letter <letter>: Show distance of each letter from <letter>
   word <guess>: Show answer distances from guess
+  dist <left> <right>: Show distance between two words
   best: Find guess with the most distinct responses
   cv <guess>: Show cluster vector of guess
   letter_options <guess> <score>: Show letter possibles for score
@@ -62,6 +63,17 @@ fn main() -> ExitCode {
 
             let distinct_distances = distinct_distances(&set);
             println!("\n{distinct_distances} distinct distances.");
+        }
+
+        "dist" => {
+            if args.len() != 2 {
+                return print_usage("'left' 'right' not provided.");
+            }
+
+            let left = args[0].to_ascii_lowercase();
+            let right = args[1].to_ascii_lowercase();
+            let distance = word_distance(&left, &right);
+            println!("Distance ('{left}', '{right}') -> {distance}");
         }
 
         "best" => {
