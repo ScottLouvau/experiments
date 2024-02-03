@@ -1,1 +1,5 @@
+# Rust Build output
 target/
+
+# Code Coverage data
+lcov.info
