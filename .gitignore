@@ -3,3 +3,6 @@ target/
 
 # Code Coverage data
 lcov.info
+
+# Docker Build log
+build.log
