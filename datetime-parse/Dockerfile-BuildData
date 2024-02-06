@@ -1,0 +1,11 @@
+
+ARG RT_VERSION=8.0
+FROM mcr.microsoft.com/dotnet/sdk:${RT_VERSION}
+ARG RT_VERSION
+
+WORKDIR /usr/local/src
+COPY ./cs/DateTimeParse.csproj ./cs/DateTimeParse.sln ./cs/*.cs ./cs/
+COPY ./rs/src ./rs/src
+
+WORKDIR /usr/local/src/cs
+RUN dotnet run -c Release -f net${RT_VERSION}

@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Setup
+# =====
+#  - cargo install cargo-instruments
+#  - xcode-select --install
+
+# cargo build --release
+# ./target/release/rs
+# cargo instruments --release --template time
+
+#cargo +nightly build -Z build-std=std,panic_abort --target aarch64-apple-darwin --release
+
+cargo instruments --release --template time

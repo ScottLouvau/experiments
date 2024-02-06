@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PublishDir>../cs-pub</PublishDir>
+    <OutputPath>../cs-bin</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+
+    <!-- 
+      Set TargetFramework to match the version of .NET in the Docker builder; default to .NET 8.0 when building outside docker 
+      The code works on .NET 6.0, 7.0, 8.0, but Docker won't build if multiple TargetFrameworks specified and all SDKs not installed.
+    -->
+    <TargetFramework Condition="'$(RT_VERSION)' != ''">net$(RT_VERSION)</TargetFramework>
+    <TargetFramework Condition="'$(RT_VERSION)' == ''">net8.0</TargetFramework>
+    <!--<TargetFrameworks>net8.0;net7.0;net6.0</TargetFrameworks>-->
+
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

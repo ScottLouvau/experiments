@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Build Release for ARM64 for [Current OS] (M1 MacOS build)
+dotnet publish -c Release -a arm64
+
+# Build Release for x64 for [Current OS] (Windows x64, Mac x64, Linux x64)
+dotnet publish -c Release -a x64
