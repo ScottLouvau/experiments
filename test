@@ -1,0 +1,22 @@
+#!/bin/bash
+mkdir -p ./target/docker
+
+docker build -t scottlouvau/qwertle .
+
+docker create --name builder scottlouvau/qwertle
+docker cp builder:/usr/local/app/unit-tests.log ./target/docker/unit-tests.log
+docker cp builder:/usr/local/app/lcov.info ./target/docker/lcov.info
+docker cp builder:/usr/local/app/target/release/qwertle ./target/docker/qwertle
+docker cp builder:/usr/local/app/target/x86_64-pc-windows-gnu/release/qwertle.exe ./target/docker/qwertle-win-x64.exe
+docker rm -f builder
+
+# Fix paths in Code Coverage file to match outer machine paths
+sed 's_/usr/local/app/_./_' ./target/docker/lcov.info > ./lcov.info
+
+# In VSCode:
+#  - Install 'Coverage Gutters' extension.
+#  - Open src/lib.rs
+#  - Run 'Coverage: Show Coverage' command (Cmd+Shift+P)
+
+# Inspect Docker image
+# docker run -it --entrypoint /bin/bash --rm scottlouvau/qwertle

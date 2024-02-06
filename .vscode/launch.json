@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'qwertle'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=qwertle",
+                    "--package=qwertle"
+                ],
+                "filter": {
+                    "name": "qwertle",
+                    "kind": "bin"
+                }
+            },
+            "args": ["options", "apple", "42521"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'qwertle'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=qwertle",
+                    "--package=qwertle"
+                ],
+                "filter": {
+                    "name": "qwertle",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
