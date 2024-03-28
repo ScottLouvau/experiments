@@ -55,10 +55,10 @@ fn adjust_file(input_path: &Path, input_root_path: &Path, output_root_path: &Pat
     let content = fs::read_to_string(&input_path).unwrap();
 
     // Don't adjust files with lost HTML tables
-    if content.contains("[TABLE]") {
-        println!(" [TABLE]: {}", input_path.to_string_lossy());
-        return;
-    }
+    // if content.contains("[TABLE]") {
+    //     println!(" [TABLE]: {}", input_path.to_string_lossy());
+    //     return;
+    // }
 
     // Rebuild output filename from title in document
     let file_name = input_path.file_stem().unwrap().to_string_lossy();
@@ -69,7 +69,11 @@ fn adjust_file(input_path: &Path, input_root_path: &Path, output_root_path: &Pat
     let output_under_root = output_under_root.as_path();
     let output_path = output_root_path.join(output_under_root);
 
-    println!("{}", output_under_root.to_string_lossy());
+    // Keeping original file names to allow merging with prior work
+    // let path_under_root = input_path.strip_prefix(input_root_path).unwrap();
+    // let output_path = output_root_path.join(path_under_root);
+
+    println!("{}", output_path.strip_prefix(output_root_path).unwrap().to_string_lossy());
 
     // Update the contents
     let content = adjust_markdown(content, input_path);
@@ -88,7 +92,7 @@ fn adjust_markdown(mut content: String, input_path: &Path) -> String {
         let file_name_bytes = file_name.as_bytes();
         if let Some(last) = content_bytes.get(file_name_bytes.len() + 1) {
             if *last == *file_name.as_bytes().last().unwrap() {
-                content = content[file_name.len()+2..].to_string();
+                content = format!("{}\n{}", &content[0..file_name.len()+2], &content[file_name.len()+2..]);
             }
         }
     }
@@ -152,10 +156,10 @@ mod tests {
         assert!(content.ends_with("phone."));
 
         // Verify title removed (next thing is an image link)
-        assert!(content.starts_with("!["));
+        assert!(content.starts_with("# 2022 Vacations\n!["));
 
         // Verify image link turned into Obsidian reference style
-        assert!(content.starts_with("![[zARCHIVE-_Archive-2022-2022-Vacations-image1.png]]"));
+        assert!(content.contains("![[zARCHIVE-_Archive-2022-2022-Vacations-image1.png]]"));
 
         // Verify URL in '<' '>' unwrapped
         assert!(content.contains("https://docs.espressif.com/"));
