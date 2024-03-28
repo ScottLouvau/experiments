@@ -21,9 +21,15 @@ public static class Program
             return;
         }
 
-        List<string> words = File.ReadAllLines("Words.txt").Select(line => line.ToLowerInvariant()).ToList();
+        // Load Dictionary of valid words
+        //string dictionaryPath = @"Words.txt";
+        string dictionaryPath = @"words_easy.txt";
+        List<string> words = File.ReadAllLines(dictionaryPath).Select(line => line.ToLowerInvariant()).ToList();
+
+        // Filter to words that are playable in the current puzzle
         List<string> playableWords = words.Where(word => CanBePlayed(word, letter_sides)).ToList();
 
+        // Sort playable words by the rarity of puzzle letters included, chainability, and length
         AlphabetStats stats = new AlphabetStats();
         foreach (string word in playableWords)
         {

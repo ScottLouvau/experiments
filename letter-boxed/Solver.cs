@@ -55,7 +55,7 @@ internal class Solver
         }
 
         // If this combination is already worse than the best, stop
-        if (wordCount > this.BestWordCount || letterCount >= this.BestTotalLength || wordCount >= 4)
+        if (wordCount > this.BestWordCount || letterCount >= this.BestTotalLength || wordCount >= 5)
         {
             return;
         }
