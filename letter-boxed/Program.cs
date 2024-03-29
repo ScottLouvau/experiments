@@ -1,4 +1,20 @@
-﻿
+﻿using Xunit;
+
+/*
+  Goals:
+   - List all playable words
+   - List playable words with constraint (length, includes letters)
+   - Find the shortest (fewest words, then least total length) solution
+
+  Currently I'm filtering to playable words, then trying combinations recursively.
+  This is theoretically inefficient but it looks like there are often few chainable words (few playable words starting with the last word's last letter).
+
+  TODO:
+   - Reduce recursive time by:
+      - Convert each word into the int of included letters.
+      - Look for singles and pairs which solve before recursing deeper.
+*/
+
 public static class Program 
 {
     public static void Usage()
@@ -26,17 +42,13 @@ public static class Program
         string dictionaryPath = @"words_easy.txt";
         List<string> words = File.ReadAllLines(dictionaryPath).Select(line => line.ToLowerInvariant()).ToList();
 
+        // Static Letter statistics (one-time)
+        // AlphabetStats stats = new AlphabetStats(words);
+        // stats.Commonality();
+        // stats.Chainability();
+
         // Filter to words that are playable in the current puzzle
         List<string> playableWords = words.Where(word => CanBePlayed(word, letter_sides)).ToList();
-
-        // Sort playable words by the rarity of puzzle letters included, chainability, and length
-        AlphabetStats stats = new AlphabetStats();
-        foreach (string word in playableWords)
-        {
-            stats.CountWord(word);
-        }
-
-        //playableWords.Sort((a, b) => stats.Score(b, letter_sides).CompareTo(stats.Score(a, letter_sides)));
 
         foreach (string word in playableWords)
         {
@@ -115,5 +127,13 @@ public static class Program
     internal static int IndexToBit(int letterIndex)
     {
         return 1 << letterIndex;
+    }
+}
+
+public class Tests
+{
+    [Fact]
+    public void MedianOfTwoSortedArrays()
+    {
     }
 }

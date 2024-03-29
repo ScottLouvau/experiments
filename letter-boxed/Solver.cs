@@ -49,6 +49,8 @@ internal class Solver
                 {
                     this.WordsInBestAnswer.Add(wordIndex);
                 }
+
+                Console.WriteLine("Best: {0}", String.Join(", ", this.WordsInBestAnswer.Select(i => this.Words[i])));
             }
 
             return;
