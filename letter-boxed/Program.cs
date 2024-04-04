@@ -3,7 +3,7 @@
 /*
   Goals:
    - List all playable words
-   - List playable words with constraint (length, includes letters)
+   - List playable words with constraint (length, includes letters, starts with, ends with)
    - Find the shortest (fewest words, then least total length) solution
 
   Currently I'm filtering to playable words, then trying combinations recursively.
@@ -13,28 +13,70 @@
    - Reduce recursive time by:
       - Convert each word into the int of included letters.
       - Look for singles and pairs which solve before recursing deeper.
+
 */
 
 public static class Program 
 {
     public static void Usage()
     {
-        Console.WriteLine("Usage: letter-boxed ABC DEF GHI JKL");
+        Console.WriteLine(@"Usage:    letter-boxed ABC DEF GHI JKL <constraints?> <solve?>
+    Constraints: 
+      s_  (starts with 's')
+      _s  (ends with 's')
+      _s_ (contains 's')"
+      );
     }
 
-    public static void Main(string[] args)
+    public static void Main(string[] arguments)
     {
-        if (args.Length != 4)
+        IEnumerable<string> args = arguments;
+
+        byte[] letter_sides = ParsePuzzleLetters(args);
+        args = args.Skip(4);
+        if (letter_sides == null)
         {
             Usage();
             return;
         }
 
-        byte[] letter_sides = ParsePuzzleLetters(args);
-        if (letter_sides == null)
+        bool solvePuzzle = false;
+
+        List<Func<string, bool>> constraints = new List<Func<string, bool>>();
+        constraints.Add(word => CanBePlayed(word, letter_sides));
+
+        while(args.Any())
         {
-            Usage();
-            return;
+            string arg = args.First().ToLowerInvariant();
+
+            if (arg == "solve") {
+                solvePuzzle = true;
+                args = args.Skip(1);
+            }
+            else if (arg.Length == 3 && arg.StartsWith("_") && arg.EndsWith("_")) {
+                char letter = arg[1];
+                constraints.Add(word => word.Contains(letter));
+                args = args.Skip(1);
+            }
+            else if (arg.Length == 2 && arg.StartsWith("_")) {
+                char letter = arg[1];
+                constraints.Add(word => word.EndsWith(letter));
+                args = args.Skip(1);
+            }
+            else if (arg.Length == 2 && arg.EndsWith("_")) {
+                char letter = arg[0];
+                constraints.Add(word => word.StartsWith(letter));
+                args = args.Skip(1);
+            }
+            else if (arg.Contains("_")) {
+                constraints.Add(word => word.Contains(arg.Replace("_", "")));
+                args = args.Skip(1);
+            }
+            else {
+                Console.WriteLine("Unknown argument: {0}", arg);
+                Usage();
+                return;
+            }
         }
 
         // Load Dictionary of valid words
@@ -47,9 +89,14 @@ public static class Program
         // stats.Commonality();
         // stats.Chainability();
 
-        // Filter to words that are playable in the current puzzle
-        List<string> playableWords = words.Where(word => CanBePlayed(word, letter_sides)).ToList();
+        // Filter to words that are playable in the current puzzle and match other passed constraints
+        IEnumerable<string> wordsLeft = words;
+        foreach (var constraint in constraints)
+        {
+            wordsLeft = wordsLeft.Where(constraint);
+        }
 
+        List<string> playableWords = wordsLeft.ToList();
         foreach (string word in playableWords)
         {
             Console.WriteLine(word);
@@ -57,8 +104,10 @@ public static class Program
 
         Console.WriteLine($"{playableWords.Count} words found.");
 
-        List<string> solution = Solver.FindBestSolution(letter_sides, playableWords);
-        Console.WriteLine("Best Solution: {0}", String.Join(", ", solution));
+        if (solvePuzzle) {
+            List<string> solution = Solver.FindBestSolution(letter_sides, playableWords);
+            Console.WriteLine("Best Solution: {0}", String.Join(", ", solution));
+        }
     }
 
     // Return whether a word can be played on the current puzzle
@@ -87,19 +136,22 @@ public static class Program
     }
 
     // Convert arguments into an array of which side each letter appears on (zero for letters not in the puzzle)
-    private static byte[] ParsePuzzleLetters(string[] args) {
+    private static byte[] ParsePuzzleLetters(IEnumerable<string> args) {
         byte[] letter_sides = new byte[26];
         byte side = 1;
 
-        foreach (string arg in args) {
+        foreach (string arg in args.Take(4)) {
             foreach (char letter in arg) {
                 byte letter_index = LetterToIndex(letter);
+                if (letter_index >= 26) { return null; }
+
                 letter_sides[letter_index] = side;
             }
 
             side++;
         }
 
+        if (side != 5) { return null; }
         return letter_sides;
     }
 
