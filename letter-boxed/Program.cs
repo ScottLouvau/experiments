@@ -24,7 +24,8 @@ public static class Program
     Constraints: 
       s_  (starts with 's')
       _s  (ends with 's')
-      _s_ (contains 's')"
+      _s_ (contains 's')
+      #5  (length 5)"
       );
     }
 
@@ -41,9 +42,7 @@ public static class Program
         }
 
         bool solvePuzzle = false;
-
-        List<Func<string, bool>> constraints = new List<Func<string, bool>>();
-        constraints.Add(word => CanBePlayed(word, letter_sides));
+        Func<string, bool> constraints = word => CanBePlayed(word, letter_sides);
 
         while(args.Any())
         {
@@ -53,23 +52,25 @@ public static class Program
                 solvePuzzle = true;
                 args = args.Skip(1);
             }
+            else if (arg.StartsWith("#"))
+            {
+                int length = int.Parse(arg.Substring(1));
+                constraints = And(constraints, word => word.Length == length);
+                args = args.Skip(1);
+            }
             else if (arg.Length == 3 && arg.StartsWith("_") && arg.EndsWith("_")) {
                 char letter = arg[1];
-                constraints.Add(word => word.Contains(letter));
+                constraints = And(constraints, word => word.Contains(letter));
                 args = args.Skip(1);
             }
             else if (arg.Length == 2 && arg.StartsWith("_")) {
                 char letter = arg[1];
-                constraints.Add(word => word.EndsWith(letter));
+                constraints = And(constraints, word => word.EndsWith(letter));
                 args = args.Skip(1);
             }
             else if (arg.Length == 2 && arg.EndsWith("_")) {
                 char letter = arg[0];
-                constraints.Add(word => word.StartsWith(letter));
-                args = args.Skip(1);
-            }
-            else if (arg.Contains("_")) {
-                constraints.Add(word => word.Contains(arg.Replace("_", "")));
+                constraints = And(constraints, word => word.StartsWith(letter));
                 args = args.Skip(1);
             }
             else {
@@ -90,13 +91,7 @@ public static class Program
         // stats.Chainability();
 
         // Filter to words that are playable in the current puzzle and match other passed constraints
-        IEnumerable<string> wordsLeft = words;
-        foreach (var constraint in constraints)
-        {
-            wordsLeft = wordsLeft.Where(constraint);
-        }
-
-        List<string> playableWords = wordsLeft.ToList();
+        List<string> playableWords = words.Where(constraints).ToList();
         foreach (string word in playableWords)
         {
             Console.WriteLine(word);
@@ -108,6 +103,13 @@ public static class Program
             List<string> solution = Solver.FindBestSolution(letter_sides, playableWords);
             Console.WriteLine("Best Solution: {0}", String.Join(", ", solution));
         }
+    }
+
+    // AND together two constraints.
+    //  Must be done in a separate function so that 'left' is the constraints before 'right' is added, not whatever the final set of constraints is.
+    //  Otherwise you get infinite recursion on left.
+    private static Func<string, bool> And(Func<string, bool> left, Func<string, bool> right) {
+        return word => left(word) && right(word);
     }
 
     // Return whether a word can be played on the current puzzle
