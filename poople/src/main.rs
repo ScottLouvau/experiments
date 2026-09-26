@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::Write, fs::File, io::{self, BufRead}};
+use std::{collections::{HashMap, HashSet, VecDeque}, error::Error, fmt::{Debug, Write}, fs::File, io::{self, BufRead}};
 
 // GOAL:
 //  Emit a partial solution tree for https:://poople.io.
@@ -7,60 +7,72 @@ use std::{error::Error, fmt::Write, fs::File, io::{self, BufRead}};
 //  Show words which may appear under multiple parents only under the one with the largest number of unique descendants.
 
 
+#[derive(Clone, Copy, Hash, PartialOrd, Ord)]
 pub struct Word {
-    letters: [char; 4]
+    letters: [u8; 4]
 }
 
 impl Word {
     pub fn new(text: &str) -> Result<Word, Box<dyn Error>> {
-        let mut word = [' '; 4];
-        for (i, l) in text.chars().take(4).enumerate() {
+        let mut word = [b' '; 4];
+        for (i, l) in text.bytes().take(4).enumerate() {
             word[i] = l;
         }
 
-        if word[3] == ' ' {
-            Err(format!("Word \"{}\" was too short.", text).into())
+        if text.len() != 4 {
+            Err(format!("Word \"{}\" was the wrong length.", text).into())
         } else {
             Ok(Word { letters: word })
         }
     }
 
-    pub fn write(&self) {
-        // for c in self.letters {
-        //     print!("{}", c);
-        // }
+    pub fn distance_from(&self, other: &Word) -> u8 {
+        let mut distance = 0;
 
-        println!("{:?}", self.letters);
+        for i in 0..4 {
+            if self.letters[i] != other.letters[i] {
+                distance += 1;
+            }
+        }
+
+        distance
     }
 }
 
 impl std::fmt::Display for Word {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for c in self.letters {
-            f.write_char(c)?;
+            f.write_char(c as char)?;
         }
 
         Ok(())
     }
 }
 
+impl Debug for Word {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Word").field("letters", &self.letters).finish()
+    }
+}
 
-// // Read file by lines (efficiently; in blocks, as iterator on &str)
-// pub fn read_by_lines(file_path: &str) -> io::Result<io::Lines<io::BufReader<fs::File>>> {
-//     let file = File::open(file_path)?;
-//     Ok(io::BufReader::new(file).lines())
-// }
 
-// // Parse a line (trim, convert to int, collect into Vec)
-// fn parse_line(line: &str) -> Result<Vec<i32>, Box<dyn Error>> {
-//     Ok(line
-//         .split_ascii_whitespace()
-//         .map(|l| l.parse::<i32>().expect("Input number didn't parse"))
-//         .collect()
-//     )
-// }
+impl PartialEq for Word {
+    fn eq(&self, other: &Self) -> bool {
+        for i in 0..4 {
+            if self.letters[i] != other.letters[i] {
+                return false;
+            }
+        }
 
-fn main_inner() -> Result<(), Box<dyn Error>> {
+        true
+    }
+}
+
+impl Eq for Word {} 
+
+fn read_words() -> Result<HashSet<Word>, Box<dyn Error>> {
+    let mut words = HashSet::new();
+
     let file = File::open("valid.txt")?;
     let reader = io::BufReader::new(file);
 
@@ -69,12 +81,88 @@ fn main_inner() -> Result<(), Box<dyn Error>> {
         let mut parts = line.split(',');
         let word = parts.next().ok_or("Line without comma found")?;
         let word = Word::new(word)?;
-        println!("{}", word);
+        words.insert(word);
     }
 
-    Ok(())
+    Ok(words)
+}
+
+fn into_word_tree(root: Word, mut words: Vec<Word>) -> HashMap<Word, Vec<Word>> {
+    let mut map = HashMap::new();
+
+    let mut pending = VecDeque::new();
+    pending.push_back(root);
+    
+    while let Some(next) = pending.pop_front() {
+        let children = extract_children(&next, &mut words);
+        for child in children.iter() {
+            pending.push_back(child.clone());
+        }
+
+        map.insert(next, children);
+    }
+
+    map
+}
+
+fn extract_children(under: &Word, words: &mut Vec<Word>) -> Vec<Word> {
+    let children: Vec<Word> = words.extract_if(..,|&mut word| under.distance_from(&word) == 1).collect();
+    children
+}
+
+fn print_tree(current: &Word, indent: u8, tree: &HashMap<Word, Vec<Word>>) {
+    for _ in 0..indent {
+        print!("{}", '\t');
+    }
+
+    println!("{}", current);
+
+    if let Some(children) = tree.get(current) {
+        for child in children.iter() {
+            print_tree(child, indent + 1, tree);
+        }
+    }
 }
 
 fn main() {
-    main_inner().expect("Error");
+    let distinct_words = read_words().expect("Error");
+    let word_list = distinct_words.into_iter().collect();
+
+    let root = Word::new("POOP").unwrap();
+    let word_tree = into_word_tree(root, word_list);
+    print_tree(&root, 0, &word_tree);
+}
+
+#[cfg(test)]
+mod tests {
+    use std::hash::{BuildHasher, RandomState};
+
+use super::*;
+
+    #[test]
+    fn word_basics() {
+        // New and Display
+        let source = "POOP";
+        let poop = Word::new(&source).unwrap();
+        let text = &format!("{}", poop);
+        assert_eq!(source, text);
+
+        let state = RandomState::new();
+        let p2 = Word::new("POOP").unwrap();
+        assert_eq!(state.hash_one(&poop), state.hash_one(&p2));
+        assert_eq!(poop, p2);
+
+        // Too short, too long
+        assert!(Word::new("POP").is_err());
+        assert!(Word::new("POOPY").is_err());
+
+        // Distance
+        let goop = Word::new("GOOP").unwrap();
+        assert_eq!(poop.distance_from(&goop), 1);
+        assert_ne!(poop, goop);
+
+        let good = Word::new("GOOD").unwrap();
+        assert_eq!(poop.distance_from(&good), 2);
+        assert_eq!(goop.distance_from(&good), 1);
+    }
 }
