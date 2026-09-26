@@ -102,6 +102,7 @@ fn into_word_tree(root: Word, mut words: Vec<Word>) -> HashMap<Word, Vec<Word>> 
         map.insert(next, children);
     }
 
+    let _c2 = map.get(&root);
     map
 }
 
@@ -110,34 +111,39 @@ fn extract_children(under: &Word, words: &mut Vec<Word>) -> Vec<Word> {
     children
 }
 
-fn print_tree(current: &Word, indent: u8, tree: &HashMap<Word, Vec<Word>>) {
+fn print_tree(current: &Word, indent: u8, depth_limit: u8, tree: &HashMap<Word, Vec<Word>>) {
     for _ in 0..indent {
         print!("{}", '\t');
     }
 
     println!("{}", current);
 
-    if let Some(children) = tree.get(current) {
-        for child in children.iter() {
-            print_tree(child, indent + 1, tree);
+    if indent < depth_limit {
+        if let Some(children) = tree.get(current) {
+            for child in children.iter() {
+                print_tree(child, indent + 1, depth_limit, tree);
+            }
         }
     }
 }
 
 fn main() {
-    let distinct_words = read_words().expect("Error");
-    let word_list = distinct_words.into_iter().collect();
-
     let root = Word::new("POOP").unwrap();
+
+    let mut distinct_words = read_words().expect("Error");
+    distinct_words.remove(&root);
+
+    let word_list: Vec<Word> = distinct_words.into_iter().collect();
+
     let word_tree = into_word_tree(root, word_list);
-    print_tree(&root, 0, &word_tree);
+    let depth_limit = 30;
+    print_tree(&root, 0, depth_limit, &word_tree);
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::hash::{BuildHasher, RandomState};
-
-use super::*;
 
     #[test]
     fn word_basics() {
@@ -164,5 +170,21 @@ use super::*;
         let good = Word::new("GOOD").unwrap();
         assert_eq!(poop.distance_from(&good), 2);
         assert_eq!(goop.distance_from(&good), 1);
+    }
+
+    #[test]
+    fn word_hash() {
+        let mut map = HashMap::new();
+        let poop = Word::new("POOP").unwrap();
+        let goop = Word::new("GOOP").unwrap();
+
+        map.insert(poop, 1);
+        map.insert(goop, 2);
+
+        assert_eq!(map.get(&poop), Some(&1));
+        assert_eq!(map.get(&goop), Some(&2));
+
+        let p2 = Word::new("POOP").unwrap();
+        assert_eq!(map.get(&p2), Some(&1));
     }
 }
