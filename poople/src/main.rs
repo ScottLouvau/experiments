@@ -127,17 +127,30 @@ fn print_tree(current: &Word, indent: u8, depth_limit: u8, tree: &HashMap<Word, 
     }
 }
 
-fn main() {
+fn main_inner() -> Result<(), Box<dyn Error>> {
+    let args: Vec<String> = std::env::args().collect();
+    let depth_limit = args
+        .get(1).ok_or("USAGE: poople <depth_limit>")?
+        .parse::<u8>()?;
+
     let root = Word::new("POOP").unwrap();
 
-    let mut distinct_words = read_words().expect("Error");
+    let mut distinct_words = read_words()?;
     distinct_words.remove(&root);
 
     let word_list: Vec<Word> = distinct_words.into_iter().collect();
 
     let word_tree = into_word_tree(root, word_list);
-    let depth_limit = 30;
     print_tree(&root, 0, depth_limit, &word_tree);
+
+    Ok(())
+}
+
+fn main() {
+    if let Err(error) = main_inner() {
+        eprintln!("{}", error);
+        std::process::exit(1);
+    }
 }
 
 #[cfg(test)]
