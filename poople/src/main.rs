@@ -1,4 +1,14 @@
-use std::{collections::{HashMap, HashSet, VecDeque}, error::Error, fmt::{Debug, Write}, fs::File, io::{self, BufRead}};
+mod word;
+
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    fs::File, 
+    io::{self, BufRead}
+};
+
+use anyhow::{Context, Result, anyhow};
+use word::Word;
+
 
 // GOAL:
 //  Emit a partial solution tree for https:://poople.io.
@@ -7,70 +17,7 @@ use std::{collections::{HashMap, HashSet, VecDeque}, error::Error, fmt::{Debug, 
 //  Show words which may appear under multiple parents only under the one with the largest number of unique descendants.
 
 
-#[derive(Clone, Copy, Hash, PartialOrd, Ord)]
-pub struct Word {
-    letters: [u8; 4]
-}
-
-impl Word {
-    pub fn new(text: &str) -> Result<Word, Box<dyn Error>> {
-        let mut word = [b' '; 4];
-        for (i, l) in text.bytes().take(4).enumerate() {
-            word[i] = l;
-        }
-
-        if text.len() != 4 {
-            Err(format!("Word \"{}\" was the wrong length.", text).into())
-        } else {
-            Ok(Word { letters: word })
-        }
-    }
-
-    pub fn distance_from(&self, other: &Word) -> u8 {
-        let mut distance = 0;
-
-        for i in 0..4 {
-            if self.letters[i] != other.letters[i] {
-                distance += 1;
-            }
-        }
-
-        distance
-    }
-}
-
-impl std::fmt::Display for Word {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for c in self.letters {
-            f.write_char(c as char)?;
-        }
-
-        Ok(())
-    }
-}
-
-impl Debug for Word {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Word").field("letters", &self.letters).finish()
-    }
-}
-
-
-impl PartialEq for Word {
-    fn eq(&self, other: &Self) -> bool {
-        for i in 0..4 {
-            if self.letters[i] != other.letters[i] {
-                return false;
-            }
-        }
-
-        true
-    }
-}
-
-impl Eq for Word {} 
-
-fn read_words() -> Result<HashSet<Word>, Box<dyn Error>> {
+fn read_words() -> Result<HashSet<Word>> {
     let mut words = HashSet::new();
 
     let file = File::open("valid.txt")?;
@@ -79,7 +26,7 @@ fn read_words() -> Result<HashSet<Word>, Box<dyn Error>> {
     for line in reader.lines() {
         let line = line?;
         let mut parts = line.split(',');
-        let word = parts.next().ok_or("Line without comma found")?;
+        let word = parts.next().ok_or(anyhow!("Line without comma found"))?;
         let word = Word::new(word)?;
         words.insert(word);
     }
@@ -127,15 +74,17 @@ fn print_tree(current: &Word, indent: u8, depth_limit: u8, tree: &HashMap<Word, 
     }
 }
 
-fn main_inner() -> Result<(), Box<dyn Error>> {
+fn main_inner() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     let depth_limit = args
-        .get(1).ok_or("USAGE: poople <depth_limit>")?
-        .parse::<u8>()?;
+        .get(1).ok_or(anyhow!("USAGE: poople <depth_limit>"))?
+        .parse::<u8>().context("Could not parse depth limit. Ex: `poople 3`")?;
 
     let root = Word::new("POOP").unwrap();
 
-    let mut distinct_words = read_words()?;
+    let mut distinct_words = read_words()
+        .context("Could not read words.txt list")?;
+
     distinct_words.remove(&root);
 
     let word_list: Vec<Word> = distinct_words.into_iter().collect();
@@ -150,54 +99,5 @@ fn main() {
     if let Err(error) = main_inner() {
         eprintln!("{}", error);
         std::process::exit(1);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::hash::{BuildHasher, RandomState};
-
-    #[test]
-    fn word_basics() {
-        // New and Display
-        let source = "POOP";
-        let poop = Word::new(&source).unwrap();
-        let text = &format!("{}", poop);
-        assert_eq!(source, text);
-
-        let state = RandomState::new();
-        let p2 = Word::new("POOP").unwrap();
-        assert_eq!(state.hash_one(&poop), state.hash_one(&p2));
-        assert_eq!(poop, p2);
-
-        // Too short, too long
-        assert!(Word::new("POP").is_err());
-        assert!(Word::new("POOPY").is_err());
-
-        // Distance
-        let goop = Word::new("GOOP").unwrap();
-        assert_eq!(poop.distance_from(&goop), 1);
-        assert_ne!(poop, goop);
-
-        let good = Word::new("GOOD").unwrap();
-        assert_eq!(poop.distance_from(&good), 2);
-        assert_eq!(goop.distance_from(&good), 1);
-    }
-
-    #[test]
-    fn word_hash() {
-        let mut map = HashMap::new();
-        let poop = Word::new("POOP").unwrap();
-        let goop = Word::new("GOOP").unwrap();
-
-        map.insert(poop, 1);
-        map.insert(goop, 2);
-
-        assert_eq!(map.get(&poop), Some(&1));
-        assert_eq!(map.get(&goop), Some(&2));
-
-        let p2 = Word::new("POOP").unwrap();
-        assert_eq!(map.get(&p2), Some(&1));
     }
 }
