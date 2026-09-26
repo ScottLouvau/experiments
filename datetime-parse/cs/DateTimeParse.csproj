@@ -11,7 +11,7 @@
       The code works on .NET 6.0, 7.0, 8.0, but Docker won't build if multiple TargetFrameworks specified and all SDKs not installed.
     -->
     <TargetFramework Condition="'$(RT_VERSION)' != ''">net$(RT_VERSION)</TargetFramework>
-    <TargetFramework Condition="'$(RT_VERSION)' == ''">net8.0</TargetFramework>
+    <TargetFramework Condition="'$(RT_VERSION)' == ''">net9.0</TargetFramework>
     <!--<TargetFrameworks>net8.0;net7.0;net6.0</TargetFrameworks>-->
 
     <ImplicitUsings>enable</ImplicitUsings>
