@@ -1,12 +1,48 @@
-use std::{error::Error, fs::File, io::{self, BufRead}};
+use std::{error::Error, fmt::Write, fs::File, io::{self, BufRead}};
 
-// pub struct Word {
-//     letters: [char; 4]
-// }
+// GOAL:
+//  Emit a partial solution tree for https:://poople.io.
+//  Starting with the word POOP (the target), build a tree where each child is a word one letter away from the parent.
+//  Show each word at only the shallowest position where it may appear in the tree.
+//  Show words which may appear under multiple parents only under the one with the largest number of unique descendants.
 
-// impl Word {
 
-// }
+pub struct Word {
+    letters: [char; 4]
+}
+
+impl Word {
+    pub fn new(text: &str) -> Result<Word, Box<dyn Error>> {
+        let mut word = [' '; 4];
+        for (i, l) in text.chars().take(4).enumerate() {
+            word[i] = l;
+        }
+
+        if word[3] == ' ' {
+            Err(format!("Word \"{}\" was too short.", text).into())
+        } else {
+            Ok(Word { letters: word })
+        }
+    }
+
+    pub fn write(&self) {
+        // for c in self.letters {
+        //     print!("{}", c);
+        // }
+
+        println!("{:?}", self.letters);
+    }
+}
+
+impl std::fmt::Display for Word {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for c in self.letters {
+            f.write_char(c)?;
+        }
+
+        Ok(())
+    }
+}
 
 
 // // Read file by lines (efficiently; in blocks, as iterator on &str)
@@ -32,6 +68,7 @@ fn main_inner() -> Result<(), Box<dyn Error>> {
         let line = line?;
         let mut parts = line.split(',');
         let word = parts.next().ok_or("Line without comma found")?;
+        let word = Word::new(word)?;
         println!("{}", word);
     }
 
